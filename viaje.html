@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VR ITC Games · Trailer: el sistema de Ultrón</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/viaje.js"></script>
+  <style>
+    .ayuda-2d {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10; max-width: calc(100% - 24px);
+      font: 14px/1.4 Rajdhani, "Segoe UI", system-ui, sans-serif; color: #e6e8eb;
+      background: rgba(5, 5, 6, .88); border: 1px solid rgba(255, 22, 56, .5); padding: 8px 12px; border-radius: 8px;
+    }
+    .ayuda-2d a { color: #ff1638; }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #050506" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <a-entity light="type: ambient; color: #c8c8d0; intensity: 0.6"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 1.2" position="2 4 2"></a-entity>
+
+    <!-- el jugador va sentado en un vehículo que avanza solo -->
+    <a-entity id="jugador">
+      <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 40; lineColor: #ff1638"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 40; lineColor: #ff1638"></a-entity>
+    </a-entity>
+
+    <!-- el recorrido: red, router, memoria, CPU y Ultrón -->
+    <a-entity id="viaje" viaje-ultron></a-entity>
+  </a-scene>
+
+  <div class="ayuda-2d">Modo 2D: arrastra para mirar alrededor y haz clic en los botones (Enter = iniciar sin voz; Espacio = disparar a Ultrón). En el visor, toca "VR". · <a href="index.html">Menú</a></div>
+</body>
+</html>

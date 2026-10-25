@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VR ITC Games · CODEXIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/menu.js"></script>
+  <style>
+    :root {
+      --bg: #050506; --panel: #0d0d10; --panel-2: #121216;
+      --red: #ff1638; --red-2: #ad001d; --silver: #e6e8eb; --muted: #8f9299; --muted-2: #676a72;
+      --line: rgba(255, 255, 255, .12); --line-red: rgba(255, 22, 56, .5);
+      --corte: 22px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Rajdhani, "Segoe UI", system-ui, sans-serif; font-size: 18px; color: var(--silver); background: var(--bg); }
+    /* menú web encima de la escena 3D (se oculta al entrar a VR) */
+    #menu-web {
+      position: fixed; inset: 0; z-index: 5; overflow-y: auto;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 22, 56, .22), transparent 70%),
+        linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 100% 48px,
+        linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 48px 100%,
+        rgba(5, 5, 6, .93);
+      display: flex; flex-direction: column; align-items: center; padding: 44px 16px 80px;
+    }
+    .micro { font: 600 13px Orbitron, sans-serif; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; }
+    .micro b { color: var(--red); font-weight: 700; }
+    h1 {
+      font: 900 clamp(40px, 9vw, 76px)/1 Orbitron, sans-serif; letter-spacing: 2px; margin: 16px 0 10px; text-align: center;
+      text-shadow: 0 0 28px rgba(255, 22, 56, .35);
+    }
+    h1 span { color: var(--red); }
+    .mision {
+      display: inline-flex; gap: 12px; align-items: center; margin: 4px 0 14px; padding: 8px 18px;
+      border: 1px solid var(--line-red); background: rgba(255, 22, 56, .08);
+      font: 700 13px Orbitron, sans-serif; letter-spacing: 3px; color: var(--silver);
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    }
+    .mision i { width: 8px; height: 8px; background: var(--red); box-shadow: 0 0 12px var(--red); animation: latido 1.4s infinite; }
+    @keyframes latido { 50% { opacity: .25; } }
+    .sub { color: var(--muted); margin: 0 0 26px; text-align: center; max-width: 620px; line-height: 1.4; font-size: 19px; }
+    #entrar-vr {
+      font: 800 15px Orbitron, sans-serif; letter-spacing: 3px; text-transform: uppercase;
+      color: #fff; background: linear-gradient(135deg, var(--red), var(--red-2)); border: 0;
+      padding: 16px 30px; margin-bottom: 34px; cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+      box-shadow: 0 0 30px rgba(255, 22, 56, .35);
+    }
+    #entrar-vr:hover, #entrar-vr:focus-visible { filter: brightness(1.15); outline: none; }
+    .acciones { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 34px; }
+    .acciones #entrar-vr { margin-bottom: 0; }
+    a.trailer {
+      display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+      font: 800 15px Orbitron, sans-serif; letter-spacing: 3px; text-transform: uppercase; color: var(--silver);
+      padding: 16px 26px; border: 1px solid var(--line-red); background: rgba(255, 22, 56, .06);
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    }
+    a.trailer span { color: var(--red); }
+    a.trailer:hover, a.trailer:focus-visible { background: rgba(255, 22, 56, .18); color: #fff; outline: none; }
+    .barra { display: flex; justify-content: space-between; width: 100%; max-width: 980px; margin-bottom: 14px; }
+    .retos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; width: 100%; max-width: 980px; }
+    a.reto {
+      position: relative; display: flex; flex-direction: column; text-decoration: none; color: inherit;
+      padding: 26px 24px 20px; min-height: 250px; background: var(--line);
+      clip-path: polygon(0 0, calc(100% - var(--corte)) 0, 100% var(--corte), 100% 100%, var(--corte) 100%, 0 calc(100% - var(--corte)));
+      transition: transform .15s, background .15s;
+    }
+    /* el fondo va en ::before para que el borde (1 px de --line) también tenga las esquinas cortadas */
+    a.reto::before {
+      content: ""; position: absolute; inset: 1px; z-index: -1; background: linear-gradient(160deg, var(--panel-2), var(--panel) 60%);
+      clip-path: inherit;
+    }
+    a.reto { isolation: isolate; }
+    a.reto:hover, a.reto:focus-visible { background: var(--red); transform: translateY(-3px); outline: none; }
+    a.reto:hover::before, a.reto:focus-visible::before { background: linear-gradient(160deg, #1d0a0f, var(--panel) 65%); }
+    .numero { position: absolute; top: 12px; right: 30px; font: 900 64px/1 Orbitron, sans-serif; color: rgba(255, 255, 255, .06); }
+    a.reto:hover .numero { color: rgba(255, 22, 56, .3); }
+    .icono { font: 700 26px Orbitron, sans-serif; color: var(--red); margin-bottom: 14px; }
+    .area { font: 700 12px Orbitron, sans-serif; letter-spacing: 3px; color: var(--muted); }
+    .reto h2 { font: 800 22px/1.15 Orbitron, sans-serif; margin: 8px 0 10px; letter-spacing: .5px; }
+    .reto p { margin: 0 0 18px; color: var(--muted); line-height: 1.35; font-size: 18px; flex: 1; }
+    .pie {
+      display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--line);
+      font: 600 11px Orbitron, sans-serif; letter-spacing: 3px; color: var(--muted-2);
+    }
+    .pie b { color: var(--red); font-weight: 700; }
+    .nota {
+      margin-top: 34px; max-width: 980px; width: 100%; color: var(--muted); font-size: 17px; line-height: 1.45;
+      border-left: 2px solid var(--red); padding: 10px 16px; background: rgba(255, 255, 255, .02);
+    }
+    .nota b { color: var(--silver); }
+    #ver-web {
+      display: none; position: fixed; left: 12px; top: 12px; z-index: 6; cursor: pointer;
+      font: 700 12px Orbitron, sans-serif; letter-spacing: 2px; color: var(--silver);
+      background: rgba(5, 5, 6, .9); border: 1px solid var(--line-red); padding: 10px 16px;
+    }
+    #ver-web:hover { border-color: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+  <!-- escena 3D: fondo de circuitos y el menú que se usa dentro del visor -->
+  <a-scene background="color: #050506" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <a-entity ambiente-circuito></a-entity>
+    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+    <a-entity id="jugador">
+      <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #ff1638"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #ff1638"></a-entity>
+    </a-entity>
+    <a-entity menu-juegos></a-entity>
+  </a-scene>
+
+  <!-- menú web: para la computadora o antes de entrar a VR -->
+  <div id="menu-web">
+    <div class="micro">INIT // <b>CODEXIA</b></div>
+    <h1>VR <span>ITC</span> GAMES</h1>
+    <div class="mision"><i></i>ÁREA: VR, REDES Y TECNOLOGÍA</div>
+    <p class="sub">Ultrón tomó el control de los sistemas. Cada reto superado le quita energía. Un Operador con el visor, todo el equipo con el manual.</p>
+    <div class="acciones">
+      <button id="entrar-vr" type="button">Entrar al menú en VR</button>
+      <a class="trailer" href="viaje.html"><span>▶</span> Ver trailer</a>
+      <a class="trailer" href="material.html"><span>▤</span> Material para imprimir</a>
+    </div>
+    <div class="barra"><span class="micro">SCAN // <b>7_RETOS</b></span><span class="micro">3 MIN // RONDA</span></div>
+    <div class="retos" id="juegos"></div>
+    <p class="nota">Profesores: el instructivo, el Manual de campo, el marcador y todo lo que se imprime está en <a href="material.html" style="color:var(--red)">Material para imprimir</a>. En el visor: toca <b>Entrar al menú en VR</b> y elige el reto con el láser del control (gatillo). En cada juego, el botón <b>Menú de juegos</b> regresa aquí. Al final de cada ronda, anoten en el marcador cuánta energía le quitaron a Ultrón. Antes de empezar, el <b>trailer</b> (2 minutos) lleva al Operador dentro del sistema de Ultrón: red, router, memoria y procesador. Juega sentado y con la correa del control en la muñeca.</p>
+  </div>
+
+  <!-- en la computadora: regresar del menú 3D al menú web -->
+  <button id="ver-web" type="button">← MENÚ WEB</button>
+
+  <script>
+    dibujarMenuWeb(document.getElementById('juegos'));
+    const escena = document.querySelector('a-scene');
+    const menuWeb = document.getElementById('menu-web');
+    const verWeb = document.getElementById('ver-web');
+    const mostrarMenuWeb = (si) => {
+      menuWeb.style.display = si ? 'flex' : 'none';
+      // dentro del visor este botón no se ve (es de la página), así que basta con mostrarlo cuando no está el menú web
+      verWeb.style.display = si ? 'none' : 'block';
+    };
+    document.getElementById('entrar-vr').addEventListener('click', () => {
+      // con visor entra a VR; en la computadora se ve el menú 3D en pantalla (clic con el mouse)
+      if (escena.hasLoaded) escena.enterVR(); else escena.addEventListener('loaded', () => escena.enterVR(), { once: true });
+      mostrarMenuWeb(false);
+    });
+    verWeb.addEventListener('click', () => mostrarMenuWeb(true));
+    escena.addEventListener('enter-vr', () => mostrarMenuWeb(false));
+    escena.addEventListener('exit-vr', () => mostrarMenuWeb(true));
+  </script>
+</body>
+</html>
