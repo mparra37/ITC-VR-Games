@@ -135,3 +135,8 @@ These are prototypes. So far they have been tested in desktop browsers (2D mode)
 ## Credits
 
 The cooperative format is inspired by *Keep Talking and Nobody Explodes*. *Laboratorio NOC-7* is based on an earlier escape-room prototype by the author.
+
+
+## Scoring without taking the headset
+
+At the end of each round the headset shows the score and an 8-character verification code (game, team, score and time, checksummed). Teams write both on paper; `marcador.html` verifies them and builds the team scoreboard. Optionally, `js/config.js` points to a Google Apps Script web app (`apps_script/`) so scores are sent to Google Sheets automatically. `empezar.html` is a one-page quick start with the team score sheet.

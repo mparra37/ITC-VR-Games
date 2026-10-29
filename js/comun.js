@@ -10,8 +10,10 @@
  * - ambiente-futurista: cielo oscuro, ciudad con luces azules, anillos y partículas de datos
  * - ambiente-circuito: dentro de la computadora (circuitos, chips, pulsos de datos)
  * - sonido: pitidos generados por el navegador (sin archivos)
+ * - musica: música de fondo sencilla, también generada por el navegador
+ * - dibujarFinalRonda / dibujarCodigo: pantalla final con el puntaje y el código de verificación
  */
-/* global AFRAME, THREE */
+/* global AFRAME, THREE, marcador */
 
 const PIXELES_POR_METRO = 1000;
 
@@ -612,4 +614,180 @@ const sonido = {
   mal() { this.tono(180, 0.4, 'sawtooth', 0.08); },
   nivel() { [523, 659, 784].forEach((f, i) => this.tono(f, 0.15, 'triangle', 0.1, i * 0.1)); },
   fin() { [440, 330, 220].forEach((f, i) => this.tono(f, 0.3, 'square', 0.06, i * 0.22)); },
+};
+
+// ---------- música de fondo (sin archivos) ----------
+//
+// Música instrumental sencilla, generada por el navegador: acordes suaves, un arpegio y un bajo.
+// Va bajita a propósito (el equipo necesita hablar) y sin letra. En los últimos 30 segundos de la
+// ronda se acelera y agrega un "tic" para dar suspenso. Se apaga o prende desde el menú (tecla M en
+// la computadora) y la preferencia se guarda en el visor.
+
+const musica = {
+  ctx: null,
+  maestro: null,
+  reloj: null,
+  paso: 0,
+  siguiente: 0,
+  urgente: false,
+  ruido: null,
+  // La menor, Fa, Do, Sol (frecuencias en Hz)
+  acordes: [[220, 261.63, 329.63], [174.61, 220, 261.63], [261.63, 329.63, 392], [196, 246.94, 293.66]],
+  arpegio: [0, 1, 2, 1, 0, 2, 1, 2],
+
+  encendida() {
+    try { return localStorage.getItem('enlace-musica') !== 'no'; } catch (e) { return true; }
+  },
+
+  ponerEncendida(si) {
+    try { localStorage.setItem('enlace-musica', si ? 'si' : 'no'); } catch (e) { /* sin almacenamiento */ }
+    if (!si) this.detener();
+  },
+
+  iniciar() {
+    if (!this.encendida() || this.reloj) return;
+    try {
+      sonido.ctx = sonido.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      this.ctx = sonido.ctx;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const t = this.ctx.currentTime;
+      this.maestro = this.ctx.createGain();
+      this.maestro.gain.setValueAtTime(0.0001, t);
+      this.maestro.gain.exponentialRampToValueAtTime(0.5, t + 2);
+      this.maestro.connect(this.ctx.destination);
+      this.paso = 0;
+      this.urgente = false;
+      this.siguiente = t + 0.1;
+      this.reloj = setInterval(() => this.programar(), 60);
+    } catch (e) { /* sin audio, el juego sigue */ }
+  },
+
+  detener() {
+    if (!this.reloj) return;
+    clearInterval(this.reloj);
+    this.reloj = null;
+    const t = this.ctx.currentTime;
+    const maestro = this.maestro;
+    maestro.gain.cancelScheduledValues(t);
+    maestro.gain.setValueAtTime(Math.max(0.0001, maestro.gain.value), t);
+    maestro.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    setTimeout(() => maestro.disconnect(), 1000);
+  },
+
+  ponerUrgente(si) { this.urgente = si; },
+
+  /** Programa las notas que tocan en el próximo cuarto de segundo. */
+  programar() {
+    const bpm = this.urgente ? 128 : 96;
+    if (this.siguiente < this.ctx.currentTime) this.siguiente = this.ctx.currentTime + 0.05; // la pestaña estuvo dormida
+    while (this.siguiente < this.ctx.currentTime + 0.3) {
+      this.tocarPaso(this.paso, this.siguiente, 60 / bpm / 2);
+      this.siguiente += 60 / bpm / 2;
+      this.paso += 1;
+    }
+  },
+
+  voz(frecuencia, t, duracion, { tipo = 'triangle', volumen = 0.03, ataque = 0.01, filtro = 0 } = {}) {
+    const osc = this.ctx.createOscillator();
+    const gan = this.ctx.createGain();
+    osc.type = tipo;
+    osc.frequency.value = frecuencia;
+    gan.gain.setValueAtTime(0.0001, t);
+    gan.gain.exponentialRampToValueAtTime(volumen, t + ataque);
+    gan.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
+    osc.connect(gan);
+    let salida = gan;
+    if (filtro) {
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = filtro;
+      gan.connect(f);
+      salida = f;
+    }
+    salida.connect(this.maestro);
+    osc.start(t);
+    osc.stop(t + duracion + 0.05);
+  },
+
+  tocarPaso(paso, t, octavo) {
+    const acorde = this.acordes[Math.floor(paso / 8) % 4];
+    if (paso % 8 === 0) {
+      // acorde largo y suave (un compás)
+      acorde.forEach((f) => this.voz(f, t, octavo * 8, { tipo: 'sawtooth', volumen: 0.018, ataque: 0.6, filtro: 700 }));
+    }
+    if (paso % 4 === 0) this.voz(acorde[0] / 2, t, octavo * 3, { tipo: 'sine', volumen: 0.09, ataque: 0.02 });
+    this.voz(acorde[this.arpegio[paso % 8]] * 2, t, octavo * 0.9, { volumen: this.urgente ? 0.03 : 0.022 });
+    if (this.urgente) this.tic(t, paso % 2 === 0 ? 0.03 : 0.015);
+  },
+
+  /** "Tic" de ruido corto (como un reloj) para los últimos segundos. */
+  tic(t, volumen) {
+    if (!this.ruido) {
+      this.ruido = this.ctx.createBuffer(1, Math.round(this.ctx.sampleRate * 0.05), this.ctx.sampleRate);
+      const datos = this.ruido.getChannelData(0);
+      for (let i = 0; i < datos.length; i++) datos[i] = Math.random() * 2 - 1;
+    }
+    const fuente = this.ctx.createBufferSource();
+    fuente.buffer = this.ruido;
+    const filtro = this.ctx.createBiquadFilter();
+    filtro.type = 'highpass';
+    filtro.frequency.value = 6000;
+    const gan = this.ctx.createGain();
+    gan.gain.setValueAtTime(volumen, t);
+    gan.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    fuente.connect(filtro);
+    filtro.connect(gan);
+    gan.connect(this.maestro);
+    fuente.start(t);
+  },
+};
+
+// tecla M (en la computadora): prender o apagar la música
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'm' && e.key !== 'M') return;
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  musica.ponerEncendida(!musica.encendida());
+});
+
+// El código de verificación y el envío a Google Sheets están en js/marcador.js.
+
+/** Recuadro con el equipo, el código de verificación y si ya se mandó a la hoja. */
+function dibujarCodigo(ctx, x, y, w, h, registro) {
+  rectRedondo(ctx, x, y, w, h, 18);
+  ctx.fillStyle = '#13233D';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = COLOR.acento;
+  ctx.stroke();
+  const equipo = registro.equipo ? `EQUIPO ${registro.equipo}` : 'EQUIPO SIN ELEGIR';
+  texto(ctx, `${equipo} · CÓDIGO`, x + 36, y + h * 0.27, { tam: h * 0.2, peso: 600, color: COLOR.tenue });
+  texto(ctx, registro.codigo, x + 36, y + h * 0.66, { tam: h * 0.42, peso: 600, color: COLOR.acento, fuente: MONO });
+  const estados = {
+    enviando: ['Enviando al marcador…', COLOR.tenue],
+    enviado: ['✓ Enviado al marcador', COLOR.bien],
+    'sin-internet': ['Sin internet: anótenlo en la hoja', COLOR.texto],
+    papel: ['Anótenlo en la hoja del equipo', COLOR.texto],
+  };
+  const [mensaje, color] = estados[registro.estado] || estados.papel;
+  texto(ctx, mensaje, x + w - 36, y + h * 0.36, { tam: h * 0.22, peso: 600, color, alinear: 'right' });
+  texto(ctx, 'puntaje + código', x + w - 36, y + h * 0.68, { tam: h * 0.19, color: COLOR.tenue, alinear: 'right' });
+}
+
+/** Pantalla final de las rondas cronometradas (igual en todos los juegos). */
+function dibujarFinalRonda(ctx, w, h, { practica, puntaje, unidad, detalle, registro }) {
+  fondoPanel(ctx, w, h);
+  texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.09, { tam: 54, peso: 700, color: COLOR.acento, alinear: 'center' });
+  texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten el puntaje y el código en su hoja!', w / 2, h * 0.2, { tam: 44, peso: 700, color: COLOR.bien, alinear: 'center' });
+  texto(ctx, `${puntaje}`, w / 2, h * 0.37, { tam: 140, peso: 700, alinear: 'center' });
+  texto(ctx, unidad, w / 2, h * 0.51, { tam: 38, color: COLOR.tenue, alinear: 'center' });
+  texto(ctx, detalle, w / 2, h * 0.59, { tam: 32, color: COLOR.tenue, alinear: 'center' });
+  if (!practica && registro) dibujarCodigo(ctx, 40, h * 0.65, w - 80, h * 0.21, registro);
+  texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, practica || !registro ? h * 0.8 : h * 0.93, { tam: 32, peso: 600, alinear: 'center', color: practica ? COLOR.texto : COLOR.tenue });
+}
+
+/** Todas las rondas: arrancar y parar la música, y acelerarla en los últimos 30 segundos. */
+const rondaComun = {
+  empezar(modo) { musica.iniciar(); musica.ponerUrgente(false); },
+  segundo(restante, modo) { musica.ponerUrgente(modo === 'ronda' && restante <= 30); },
+  terminar() { musica.detener(); },
 };

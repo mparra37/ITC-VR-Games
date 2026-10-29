@@ -5,11 +5,11 @@
  * - el menú 3D dentro del visor (se elige con el láser del control)
  * Para agregar un juego nuevo, basta con agregarlo a MINIJUEGOS.
  */
-/* global AFRAME, COLOR, MONO, texto, rectRedondo, pintar, sonido, crearEntidad, refrescarApuntadores, dibujarLogo */
+/* global AFRAME, COLOR, MONO, texto, rectRedondo, pintar, sonido, crearEntidad, refrescarApuntadores, dibujarLogo, marcador, musica */
 
 window.MINIJUEGOS = [
   { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Lean la dirección IP de cada paquete y mándenlo por la puerta correcta.', nivel: 'Media', voltear: true },
-  { archivo: 'arma.html', area: 'Hardware', titulo: 'Arma la computadora', texto: 'Un rompecabezas: el equipo tiene el plano y guía dónde va cada pieza.', nivel: 'Fácil', voltear: true },
+  { archivo: 'arma.html', area: 'Hardware', titulo: 'Arma la computadora', texto: 'Un rompecabezas: el equipo tiene el plano y guía dónde va cada pieza.', nivel: 'Fácil · 5 min', voltear: true },
   { archivo: 'carrera.html', area: 'Binario y ASCII', titulo: 'Carrera de palabras', texto: 'Traduzcan palabras escritas en binario, letra por letra.', nivel: 'Media', voltear: false },
   { archivo: 'robot.html', area: 'Algoritmos', titulo: 'Robot programado', texto: 'Sigan el programa paso a paso y digan dónde termina el robot.', nivel: 'Fácil', voltear: false },
   { archivo: 'noc7.html', area: 'Escape room', titulo: 'Laboratorio NOC-7', texto: 'Cuatro salas de binario, ASCII y lógica. Resuelvan cada reto y jalen la palanca.', nivel: 'Media · 12 min', voltear: true },
@@ -86,6 +86,32 @@ AFRAME.registerComponent('menu-juegos', {
         this.dibujarPie(`Cargando ${j.titulo}…`);
         setTimeout(() => irA(j.archivo), 250);
       });
+    });
+    // debajo del panel: de qué equipo es este visor y la música
+    this.botonesEquipo = [];
+    const tira = crearEntidad(this.el, { position: '0 0.36 -1.62', rotation: '-14 0 0' });
+    crearEntidad(tira, { geometry: 'primitive: plane; width: 2.1; height: 0.2', material: 'shader: flat; color: #06080D; opacity: 0.94; transparent: true', position: '0 0 -0.01' });
+    const etiqueta = crearEntidad(tira, { lienzo: 'ancho: 0.5; alto: 0.12', position: '-0.78 0 0' });
+    pintar(etiqueta, (ctx, w, h) => texto(ctx, 'Este visor es del', 20, h / 2, { tam: 42, peso: 600, color: COLOR.tenue }));
+    for (let n = 1; n <= 8; n++) {
+      const b = crearEntidad(tira, { position: `${-0.44 + (n - 1) * 0.135} 0 0`, class: 'clickable', boton: { texto: `Eq. ${n}`, ancho: 0.125, alto: 0.12, accion: 'equipo', valor: String(n), elegido: marcador.equipo() === n } });
+      this.botonesEquipo.push(b);
+    }
+    this.botonMusica = crearEntidad(tira, { position: '0.83 0 0', class: 'clickable', boton: { texto: musica.encendida() ? 'Música: sí' : 'Música: no', ancho: 0.3, alto: 0.12, accion: 'musica' } });
+    this.el.sceneEl.addEventListener('boton-presionado', (e) => {
+      const { accion, valor } = e.detail;
+      if (accion === 'equipo') {
+        marcador.ponerEquipo(Number(valor));
+        this.botonesEquipo.forEach((b, i) => b.setAttribute('boton', 'elegido', i + 1 === Number(valor)));
+        sonido.bien();
+        this.dibujarPie(`Listo: este visor es del equipo ${valor}`);
+        document.dispatchEvent(new CustomEvent('enlace-equipo'));
+      } else if (accion === 'musica') {
+        musica.ponerEncendida(!musica.encendida());
+        this.botonMusica.setAttribute('boton', 'texto', musica.encendida() ? 'Música: sí' : 'Música: no');
+        sonido.tecla();
+        document.dispatchEvent(new CustomEvent('enlace-musica'));
+      }
     });
     refrescarApuntadores();
   },

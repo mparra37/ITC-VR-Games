@@ -22,7 +22,7 @@ Negro `#06080D`, azul marino `#0B1F3A`, gris `#8B95A7`, blanco `#F2F4F8` y un so
 
 ## Cómo se juega
 
-Todos los juegos usan las mismas reglas: al abrirlos hay tres botones, **Practicar** (sin tiempo), **Empezar ronda** (3 minutos) y **Menú de juegos** (regresa al menú sin salir del visor); +1 por acierto y bloqueo de 5 segundos al fallar o saltar ("¡Enlace caído!"). Al terminar aparece el puntaje en grande con el aviso "¡Anoten este puntaje en el marcador!". En esa pantalla final están **Nueva ronda** (para el siguiente Operador) y **Menú de juegos**.
+Todos los juegos usan las mismas reglas: al abrirlos hay tres botones, **Practicar** (sin tiempo), **Empezar ronda** (3 minutos) y **Menú de juegos** (regresa al menú sin salir del visor); +1 por acierto y bloqueo de 5 segundos al fallar o saltar ("¡Enlace caído!"). Arma la computadora dura 5 minutos. Al terminar aparece el puntaje en grande y un **código de verificación** de 8 letras: el equipo anota puntaje y código en su hoja (`empezar.html` trae la hoja) y el profesor los verifica en `marcador.html`. Si `js/config.js` tiene la URL de Google Apps Script (`apps_script/LEEME.md`), el puntaje además llega solo a una hoja de Google Sheets. El número de equipo de cada visor y la música de fondo (generada por el navegador, sin letra) se eligen en el menú. En esa pantalla final están **Nueva ronda** (para el siguiente Operador) y **Menú de juegos**.
 
 - **Router humano:** llega un paquete con una dirección IP. Como en un sobre, los 3 primeros números son la **red** (la calle) y el último es el **equipo** (el número de casa); el visor pinta la red en azul y el equipo en gris. El Operador le dicta la red al equipo, el equipo la busca en la tabla de rutas y le dice la puerta (SALÓN, BIBLIOTECA, INTERNET, SERVIDORES, LABORATORIO o BASURA, cada una con su dibujo). El Operador voltea y le dispara el paquete. Después de cada respuesta, la consola explica por qué ("La red 192.168.1 está en la tabla → SALÓN"). Nivel 2: redes parecidas (192.168.12 no es 192.168.1). Nivel 3: direcciones imposibles (un número mayor que 255 → BASURA) y las puertas cambian de lugar.
 - **Arma la computadora:** enfrente hay una placa con lugares numerados y su modelo (A, B o C). Las piezas que faltan flotan alrededor como **dibujos sin nombre**. El Operador toma una pieza (apunta y gatillo), se la describe al equipo, y el equipo, con el catálogo y el plano armado de esa placa, le dice el número. El Operador apunta a ese número y la pieza vuela a su lugar. Al completar la placa, la computadora "se enciende" y muestra el nombre de cada pieza. La 1.ª placa tiene 4 lugares libres, la 2.ª 6 y desde la 3.ª los 8.
@@ -82,3 +82,10 @@ python ../prototipo_papel/publicar_material.py
 
 - Probarlo en un Quest real (solo se probó en la computadora, en modo 2D): que se lean bien los dibujos de las piezas y las direcciones IP.
 - Marcador en vivo para el proyector.
+
+
+## Páginas nuevas
+
+- `empezar.html`: cómo empezar en una página (guion de un minuto, 3 pasos por juego, hoja de puntajes).
+- `marcador.html`: verificar códigos y marcador por equipo (en vivo si hay hoja de Google).
+- `js/router_cuartos.js`: los cuartos 3D detrás de cada puerta del Router humano.

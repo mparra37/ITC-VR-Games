@@ -13,7 +13,7 @@
  * Dentro del visor NO hay tabla ASCII ni de potencias de 2: van en la hoja del equipo.
  * Los valores se eligen al azar en cada partida (cada equipo tiene números distintos).
  */
-/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, azarConSemilla, irA */
+/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, azarConSemilla, irA, marcador, rondaComun, dibujarCodigo */
 
 const NOC = {
   panel: { x: 0, y: 1.75, z: -4.1, ancho: 5.4, alto: 3.3 },
@@ -278,6 +278,7 @@ AFRAME.registerComponent('noc7', {
     this.tFinal = null;
     this.irASala(0);
     sonido.nivel();
+    rondaComun.empezar('escape');
   },
 
   irASala(i) {
@@ -365,22 +366,28 @@ AFRAME.registerComponent('noc7', {
     this.sumar(bono);
     [330, 440, 550, 660, 880, 1100].forEach((f, i) => sonido.tono(f, 0.18, 'triangle', 0.1, i * 0.11));
     this.pintarRotulo('LABORATORIO COMPLETADO', COLOR.bien);
+    rondaComun.terminar();
     const m = Math.floor(this.tFinal / 60);
     const s = Math.floor(this.tFinal % 60);
-    pintar(this.panel, (ctx, w, h) => {
-      fondoPanel(ctx, w, h, 'rgba(12,22,40,.96)');
-      texto(ctx, '¡Escaparon del laboratorio!', w / 2, h * 0.12, { tam: 110, peso: 700, color: COLOR.bien, alinear: 'center' });
-      const filas = [['Tiempo', `${m} min ${s} s`], ['Bono por rapidez', `+${bono}`], ['Pistas', `${this.pistas}`], ['Errores', `${this.errores}`]];
-      filas.forEach(([k, v], i) => {
-        texto(ctx, k, w * 0.3, h * (0.28 + i * 0.08), { tam: 60, color: COLOR.tenue });
-        texto(ctx, v, w * 0.7, h * (0.28 + i * 0.08), { tam: 60, peso: 600, alinear: 'right', fuente: MONO });
-      });
-      texto(ctx, 'TOTAL', w * 0.3, h * 0.62, { tam: 80, peso: 700 });
-      texto(ctx, `${this.puntos}`, w * 0.7, h * 0.62, { tam: 110, peso: 700, color: COLOR.acento, alinear: 'right' });
-      texto(ctx, '¡Anoten el tiempo y el total en el marcador!', w / 2, h * 0.76, { tam: 56, peso: 600, color: COLOR.bien, alinear: 'center' });
-    });
+    this.registro = marcador.registrar('noc7', this.puntos, `tiempo ${m}:${String(s).padStart(2, '0')} · pistas ${this.pistas} · errores ${this.errores}`, () => this.pintarFinal(m, s, bono));
+    this.pintarFinal(m, s, bono);
     this.activar('final');
     this.pintarHud();
+  },
+
+  pintarFinal(m, s, bono) {
+    pintar(this.panel, (ctx, w, h) => {
+      fondoPanel(ctx, w, h, 'rgba(12,22,40,.96)');
+      texto(ctx, '¡Escaparon del laboratorio!', w / 2, h * 0.1, { tam: 110, peso: 700, color: COLOR.bien, alinear: 'center' });
+      const filas = [['Tiempo', `${m} min ${s} s`], ['Bono por rapidez', `+${bono}`], ['Pistas', `${this.pistas}`], ['Errores', `${this.errores}`]];
+      filas.forEach(([k, v], i) => {
+        texto(ctx, k, w * 0.3, h * (0.22 + i * 0.065), { tam: 56, color: COLOR.tenue });
+        texto(ctx, v, w * 0.7, h * (0.22 + i * 0.065), { tam: 56, peso: 600, alinear: 'right', fuente: MONO });
+      });
+      texto(ctx, 'TOTAL', w * 0.3, h * 0.52, { tam: 80, peso: 700 });
+      texto(ctx, `${this.puntos}`, w * 0.7, h * 0.52, { tam: 110, peso: 700, color: COLOR.acento, alinear: 'right' });
+      if (this.registro) dibujarCodigo(ctx, w * 0.12, h * 0.6, w * 0.76, h * 0.15, this.registro);
+    });
   },
 
   fundido(enNegro) {

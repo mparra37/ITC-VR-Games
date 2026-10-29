@@ -9,7 +9,7 @@
  * sube de nivel cada 5 aciertos (nivel 3 = programas con "Repite").
  * Al acertar, el robot recorre el programa en el tablero para que todos vean por qué.
  */
-/* global AFRAME, THREE, COLOR, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores */
+/* global AFRAME, THREE, COLOR, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, marcador, rondaComun, dibujarFinalRonda */
 
 const CONFIG = {
   segundosRonda: 180,
@@ -302,6 +302,7 @@ AFRAME.registerComponent('robot-programado', {
     this.mostrar('juego');
     this.dibujarTodo();
     this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Tienen 3 minutos', COLOR.acento);
+    rondaComun.empezar(modo);
     sonido.nivel();
   },
 
@@ -374,6 +375,10 @@ AFRAME.registerComponent('robot-programado', {
   terminar() {
     this.animacion = null;
     sonido.fin();
+    rondaComun.terminar();
+    this.registro = this.modo === 'ronda'
+      ? marcador.registrar('robot', this.puntaje, `nivel ${this.nivel} · errores ${this.errores} · saltados ${this.saltados}`, () => this.dibujarResultado())
+      : null;
     this.dibujarResultado();
     this.mostrar('fin');
   },
@@ -442,6 +447,7 @@ AFRAME.registerComponent('robot-programado', {
     if (segundo !== this.ultimoSegundo) {
       this.ultimoSegundo = segundo;
       this.dibujarBarra();
+      rondaComun.segundo((this.finRonda - ahora) / 1000, this.modo);
       if (this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) this.dibujarInfo();
       if (this.mensaje && ahora > this.mensaje.hasta) {
         this.mensaje = null;
@@ -534,18 +540,12 @@ AFRAME.registerComponent('robot-programado', {
   },
 
   dibujarResultado() {
-    const practica = this.modo === 'practica';
-    pintar(this.lienzoResultado, (ctx, w, h) => {
-      fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.11, { tam: 64, peso: 800, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.26, { tam: 56, peso: 700, color: COLOR.bien, alinear: 'center' });
-      texto(ctx, `${this.puntaje}`, w / 2, h * 0.46, { tam: 190, peso: 800, alinear: 'center' });
-      texto(ctx, this.puntaje === 1 ? 'programa resuelto' : 'programas resueltos', w / 2, h * 0.61, { tam: 50, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`, w / 2, h * 0.71, { tam: 42, color: COLOR.tenue, alinear: 'center' });
-      rectRedondo(ctx, 60, h * 0.79, w - 120, h * 0.16, 18);
-      ctx.fillStyle = '#13233D';
-      ctx.fill();
-      texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.87, { tam: 44, peso: 600, alinear: 'center' });
-    });
+    pintar(this.lienzoResultado, (ctx, w, h) => dibujarFinalRonda(ctx, w, h, {
+      practica: this.modo === 'practica',
+      puntaje: this.puntaje,
+      unidad: this.puntaje === 1 ? 'programa resuelto' : 'programas resueltos',
+      detalle: `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`,
+      registro: this.registro,
+    }));
   },
 });

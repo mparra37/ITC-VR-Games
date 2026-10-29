@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enlace VR · Marcador</title>
+  <meta name="description" content="Marcador del profesor: verifica los códigos de cada ronda y muestra los puntajes por equipo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/config.js"></script>
+  <script src="js/marcador.js"></script>
+  <style>
+    :root {
+      --negro: #06080D; --marino: #0B1F3A; --panel: #0C1628; --panel-2: #102039;
+      --acento: #5AA9FF; --acento-2: #2F6FBF; --blanco: #F2F4F8; --gris: #8B95A7; --gris-2: #5E6B80;
+      --bien: #3DDC97; --mal: #FF5C6C; --linea: rgba(242, 244, 248, .12);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif; font-size: 17px; color: var(--blanco); background: linear-gradient(180deg, var(--marino) 0%, var(--negro) 420px) var(--negro); min-height: 100vh; }
+    main { max-width: 980px; margin: 0 auto; padding: 36px 16px 80px; }
+    a { color: var(--acento); }
+    .marca { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .marca svg { width: 52px; height: 24px; flex: none; }
+    .marca b { font-size: 26px; letter-spacing: -.5px; }
+    .marca b span { color: var(--acento); }
+    h1 { font-size: clamp(32px, 7vw, 48px); margin: 22px 0 6px; letter-spacing: -.5px; }
+    .sub { color: var(--gris); margin: 0 0 26px; line-height: 1.5; max-width: 720px; }
+    section { background: var(--panel); border: 1px solid var(--linea); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+    h2 { font-size: 22px; margin: 0 0 6px; }
+    .etq { font: 500 13px "IBM Plex Mono", monospace; color: var(--acento); }
+    .ayuda { color: var(--gris); margin: 4px 0 14px; line-height: 1.5; }
+    textarea, input[type="url"] {
+      width: 100%; font: 500 16px "IBM Plex Mono", monospace; color: var(--blanco); background: var(--negro);
+      border: 1px solid var(--linea); border-radius: 10px; padding: 12px;
+    }
+    textarea { min-height: 130px; resize: vertical; }
+    textarea:focus, input:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+    .fila { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+    button, .boton {
+      font: 600 15px "Space Grotesk", system-ui, sans-serif; cursor: pointer; text-decoration: none;
+      padding: 11px 18px; border-radius: 10px; color: var(--blanco); background: transparent; border: 1px solid var(--linea);
+    }
+    button.principal { background: var(--acento-2); border-color: var(--acento-2); }
+    button:hover, .boton:hover { border-color: var(--acento); }
+    .tabla { width: 100%; overflow-x: auto; margin-top: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 16px; }
+    th { text-align: left; font: 500 12px "IBM Plex Mono", monospace; color: var(--gris); text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+    td.num { font-family: "IBM Plex Mono", monospace; text-align: right; }
+    td.codigo { font-family: "IBM Plex Mono", monospace; color: var(--acento); }
+    .si { color: var(--bien); font-weight: 600; }
+    .no { color: var(--mal); font-weight: 600; }
+    .tenue { color: var(--gris); }
+    .estado { display: inline-flex; align-items: center; gap: 8px; color: var(--gris); font-size: 15px; }
+    .punto { width: 10px; height: 10px; border-radius: 50%; background: var(--gris-2); }
+    .punto.vivo { background: var(--bien); box-shadow: 0 0 0 4px rgba(61, 220, 151, .18); }
+    /* marcador grande, para proyectar */
+    #marcador table { font-size: clamp(16px, 2.4vw, 26px); }
+    #marcador td.total { font-weight: 700; color: var(--acento); font-size: 1.15em; }
+    #marcador tr.primero td:first-child::before { content: "★ "; color: #F2C14E; }
+    .rondas { color: var(--gris-2); font-size: .7em; margin-left: 4px; }
+    #marcador:fullscreen { background: var(--negro); padding: 40px; overflow: auto; }
+    #marcador:fullscreen table { font-size: 3.2vw; }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: var(--acento); font-weight: 600; }
+    pre { background: var(--negro); border: 1px solid var(--linea); border-radius: 10px; padding: 14px; overflow-x: auto; font: 13px/1.5 "IBM Plex Mono", monospace; max-height: 360px; }
+    ol { line-height: 1.6; padding-left: 22px; }
+    code { font-family: "IBM Plex Mono", monospace; font-size: .92em; color: #CFE3FF; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="marca" href="index.html" aria-label="Enlace VR, volver al menú">
+    <svg viewBox="0 0 64 30" aria-hidden="true"><circle cx="9" cy="15" r="7" fill="none" stroke="#F2F4F8" stroke-width="3"/><circle cx="55" cy="15" r="7" fill="#5AA9FF"/><line x1="19" y1="15" x2="45" y2="15" stroke="#8B95A7" stroke-width="3" stroke-dasharray="5 4"/></svg>
+    <b>enlace<span>vr</span></b>
+  </a>
+  <h1>Marcador del profesor</h1>
+  <p class="sub">Al terminar cada ronda, el visor muestra el puntaje y un <b>código</b> de 8 letras. El equipo anota los dos en su hoja. Aquí se verifica que el puntaje anotado sea el que dio el visor, sin tener que ponerse los lentes. Si los visores tienen internet y la hoja de Google está configurada, los puntajes llegan solos.</p>
+
+  <section id="marcador" aria-labelledby="t-marcador">
+    <div class="fila" style="justify-content: space-between; margin-top: 0;">
+      <div>
+        <span class="etq">EN VIVO</span>
+        <h2 id="t-marcador">Puntajes por equipo</h2>
+      </div>
+      <div class="fila" style="margin-top: 0;">
+        <span class="estado" id="estado-hoja"><span class="punto"></span><span>Sin hoja de Google</span></span>
+        <button type="button" id="pantalla-completa">Proyectar</button>
+      </div>
+    </div>
+    <p class="ayuda" id="ayuda-marcador">Suma de todas las rondas de hoy. Los puntajes salen de los códigos verificados (de la hoja de Google y de los que pegues abajo).</p>
+    <div class="tabla"><table id="tabla-marcador"></table></div>
+  </section>
+
+  <section aria-labelledby="t-verificar">
+    <span class="etq">HOJAS DE PAPEL</span>
+    <h2 id="t-verificar">Verificar códigos</h2>
+    <p class="ayuda">Una línea por ronda: <code>equipo puntaje código</code>, como lo anotaron en su hoja (por ejemplo <code>3 12 43W8-GEYW</code>). También puedes pegar solo el código. Se aceptan minúsculas, espacios y la letra O en lugar del cero.</p>
+    <label for="codigos" class="etq">Códigos</label>
+    <textarea id="codigos" spellcheck="false" placeholder="3 12 43W8-GEYW"></textarea>
+    <div class="fila">
+      <button type="button" class="principal" id="verificar">Verificar</button>
+      <button type="button" id="limpiar">Limpiar</button>
+      <span class="tenue" id="resumen"></span>
+    </div>
+    <div class="tabla"><table id="tabla-codigos"></table></div>
+  </section>
+
+  <section aria-labelledby="t-config">
+    <span class="etq">CONFIGURACIÓN</span>
+    <h2 id="t-config">Conectar con Google Sheets (opcional)</h2>
+    <p class="ayuda">Sin esto todo funciona con los códigos en papel. Con esto, cada visor manda su puntaje al terminar la ronda y este marcador se actualiza solo cada 15 segundos.</p>
+    <ol>
+      <li>Crea una hoja en <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> con tu cuenta de Gmail.</li>
+      <li><b>Extensiones &gt; Apps Script</b>, pega el código de abajo y guarda.</li>
+      <li><b>Implementar &gt; Nueva implementación &gt; Aplicación web</b>. Ejecutar como: <b>Yo</b>. Acceso: <b>Cualquier usuario</b>. Autoriza.</li>
+      <li>Copia la URL que termina en <code>/exec</code> y pégala en <code>js/config.js</code> (<code>urlHoja</code>). Sube el cambio a GitHub.</li>
+    </ol>
+    <details>
+      <summary>Ver el código para Apps Script</summary>
+      <div class="fila"><button type="button" id="copiar">Copiar código</button><span class="tenue" id="copiado"></span></div>
+      <pre id="codigo-gs">Cargando…</pre>
+    </details>
+    <details>
+      <summary>Probar otra URL en esta computadora</summary>
+      <p class="ayuda">Solo para esta página y este navegador (los visores siguen usando la de <code>js/config.js</code>).</p>
+      <label for="url" class="etq">URL de la aplicación web</label>
+      <input type="url" id="url" placeholder="https://script.google.com/macros/s/…/exec">
+      <div class="fila"><button type="button" id="guardar-url">Usar esta URL</button></div>
+    </details>
+  </section>
+</main>
+
+<script>
+  const JUEGOS = [1, 2, 3, 4]; // las rondas cronometradas (se suman en el total)
+  const NOC7 = 5;
+  const deHoja = new Map(); // código → registro leído de la hoja
+  const dePapel = new Map(); // código → registro verificado a mano
+
+  const urlHoja = () => {
+    try { return localStorage.getItem('enlace-url-marcador') || marcador.urlHoja(); } catch (e) { return marcador.urlHoja(); }
+  };
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---------- marcador por equipo ----------
+  function pintarMarcador() {
+    const todos = new Map([...deHoja, ...dePapel]);
+    const equipos = new Map();
+    todos.forEach((r) => {
+      if (!r.valido) return;
+      const e = equipos.get(r.equipo) || { equipo: r.equipo, juegos: {}, total: 0 };
+      const j = e.juegos[r.juego] || { suma: 0, rondas: 0 };
+      j.suma += r.puntaje;
+      j.rondas += 1;
+      e.juegos[r.juego] = j;
+      if (r.juego !== NOC7) e.total += r.puntaje;
+      equipos.set(r.equipo, e);
+    });
+    const tabla = document.getElementById('tabla-marcador');
+    if (!equipos.size) {
+      tabla.innerHTML = '<tr><td class="tenue">Todavía no hay puntajes. Verifica códigos abajo o conecta la hoja de Google.</td></tr>';
+      return;
+    }
+    const lista = [...equipos.values()].sort((a, b) => b.total - a.total || a.equipo - b.equipo);
+    const celda = (j) => (j ? `${j.suma}<span class="rondas">(${j.rondas})</span>` : '<span class="tenue">—</span>');
+    tabla.innerHTML = `<thead><tr><th>Equipo</th>${JUEGOS.map((j) => `<th>${esc(JUEGOS_MARCADOR[j])}</th>`).join('')}<th>Total</th><th>${esc(JUEGOS_MARCADOR[NOC7])}</th></tr></thead><tbody>${
+      lista.map((e, i) => `<tr class="${i === 0 && e.total > 0 ? 'primero' : ''}"><td>${e.equipo ? `Equipo ${e.equipo}` : 'Sin equipo'}</td>${
+        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j])}</td>`).join('')}<td class="num total">${e.total}</td><td class="num">${celda(e.juegos[NOC7])}</td></tr>`).join('')}</tbody>`;
+  }
+
+  // ---------- verificar códigos en papel ----------
+  function verificar() {
+    const lineas = document.getElementById('codigos').value.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const filas = [];
+    let buenos = 0;
+    let malos = 0;
+    dePapel.clear();
+    lineas.forEach((linea) => {
+      const m = linea.match(/[0-9A-Za-z]{4}\s*-?\s*[0-9A-Za-z]{4}(?![0-9A-Za-z])/g);
+      const crudo = m ? m[m.length - 1] : '';
+      const numeros = linea.replace(crudo, ' ').match(/\d+/g) || [];
+      const anotadoPuntaje = numeros.length ? Number(numeros[numeros.length - 1]) : null;
+      const anotadoEquipo = numeros.length >= 2 ? Number(numeros[0]) : null;
+      const r = crudo ? marcador.leerCodigo(crudo) : null;
+      if (!r || !r.valido) {
+        malos += 1;
+        filas.push(`<tr><td class="codigo">${esc(r ? r.codigo : linea)}</td><td class="no">✗ No válido</td><td colspan="5" class="tenue">${r ? 'El código no corresponde a ninguna ronda (¿lo copiaron mal?)' : 'No encontré un código de 8 letras en esta línea'}</td></tr>`);
+        return;
+      }
+      const coincidePuntaje = anotadoPuntaje === null || anotadoPuntaje === r.puntaje;
+      const coincideEquipo = anotadoEquipo === null || anotadoEquipo === r.equipo;
+      const coincide = coincidePuntaje && coincideEquipo;
+      if (coincide) buenos += 1; else malos += 1;
+      const repetido = dePapel.has(r.codigo);
+      dePapel.set(r.codigo, r);
+      filas.push(`<tr><td class="codigo">${esc(r.codigo)}</td><td class="${coincide ? 'si' : 'no'}">${coincide ? '✓ Correcto' : '✗ No coincide'}${repetido ? ' <span class="tenue">(repetido)</span>' : ''}</td><td>${esc(r.nombreJuego)}</td><td>${r.equipo ? `Equipo ${r.equipo}` : 'Sin equipo'}${coincideEquipo ? '' : ` <span class="no">(anotaron ${anotadoEquipo})</span>`}</td><td class="num">${r.puntaje}${coincidePuntaje ? '' : ` <span class="no">(anotaron ${anotadoPuntaje})</span>`}</td><td class="num">${r.hora}</td></tr>`);
+    });
+    document.getElementById('tabla-codigos').innerHTML = filas.length
+      ? `<thead><tr><th>Código</th><th>Resultado</th><th>Juego</th><th>Equipo</th><th>Puntaje real</th><th>Hora</th></tr></thead><tbody>${filas.join('')}</tbody>`
+      : '';
+    document.getElementById('resumen').textContent = filas.length ? `${buenos} correctos · ${malos} con problema` : '';
+    pintarMarcador();
+    try { localStorage.setItem('enlace-codigos-papel', document.getElementById('codigos').value); } catch (e) { /* sin almacenamiento */ }
+  }
+
+  // ---------- hoja de Google (en vivo) ----------
+  function hoyLocal(iso) {
+    const d = new Date(iso);
+    const h = new Date();
+    return d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth() && d.getDate() === h.getDate();
+  }
+
+  async function leerHoja() {
+    const url = urlHoja();
+    const estado = document.getElementById('estado-hoja');
+    if (!url) return;
+    try {
+      const respuesta = await fetch(url, { cache: 'no-store' });
+      const filas = await respuesta.json();
+      deHoja.clear();
+      filas.filter((f) => hoyLocal(f.recibido)).forEach((f) => {
+        const r = marcador.leerCodigo(f.codigo);
+        if (r && r.valido) deHoja.set(r.codigo, r);
+      });
+      estado.innerHTML = `<span class="punto vivo"></span><span>Conectado a Google Sheets · ${deHoja.size} rondas hoy · ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>`;
+      pintarMarcador();
+    } catch (e) {
+      estado.innerHTML = '<span class="punto"></span><span>No pude leer la hoja (¿URL o permisos?)</span>';
+    }
+  }
+
+  // ---------- eventos ----------
+  document.getElementById('verificar').addEventListener('click', verificar);
+  document.getElementById('limpiar').addEventListener('click', () => { document.getElementById('codigos').value = ''; verificar(); });
+  document.getElementById('pantalla-completa').addEventListener('click', () => {
+    const caja = document.getElementById('marcador');
+    if (document.fullscreenElement) document.exitFullscreen(); else if (caja.requestFullscreen) caja.requestFullscreen();
+  });
+  document.getElementById('guardar-url').addEventListener('click', () => {
+    try { localStorage.setItem('enlace-url-marcador', document.getElementById('url').value.trim()); } catch (e) { /* sin almacenamiento */ }
+    leerHoja();
+  });
+  document.getElementById('copiar').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById('codigo-gs').textContent);
+      document.getElementById('copiado').textContent = 'Copiado ✓';
+    } catch (e) {
+      document.getElementById('copiado').textContent = 'Selecciona el texto y cópialo con Ctrl+C';
+    }
+  });
+  fetch('apps_script/Codigo.gs').then((r) => r.text()).then((t) => { document.getElementById('codigo-gs').textContent = t; })
+    .catch(() => { document.getElementById('codigo-gs').textContent = 'Abre apps_script/Codigo.gs en la carpeta del sitio.'; });
+
+  try {
+    document.getElementById('codigos').value = localStorage.getItem('enlace-codigos-papel') || '';
+    document.getElementById('url').value = localStorage.getItem('enlace-url-marcador') || '';
+  } catch (e) { /* sin almacenamiento */ }
+  verificar();
+  if (urlHoja()) {
+    leerHoja();
+    setInterval(leerHoja, 15000);
+  }
+</script>
+</body>
+</html>

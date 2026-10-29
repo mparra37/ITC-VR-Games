@@ -9,8 +9,9 @@
  * Nivel 1: SALÓN, BIBLIOTECA, INTERNET.  Nivel 2: + SERVIDORES y redes parecidas.
  * Nivel 3: + LABORATORIO y BASURA (direcciones imposibles), y las puertas se mueven tras cada paquete.
  * Ronda de 3 minutos, +1 por acierto, bloqueo de 5 segundos al fallar o saltar.
+ * Cada puerta es un cuarto pequeño en 3D (salón, biblioteca, laboratorio…): ver js/router_cuartos.js.
  */
-/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola, imagenSVG, irA */
+/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola, imagenSVG, irA, crearCuarto, CUARTO, marcador, rondaComun, dibujarFinalRonda */
 
 const CONFIG = {
   segundosRonda: 180,
@@ -111,19 +112,6 @@ function dibujarIP(ctx, ip, xCentro, y, tam, conNombres) {
 
 // ---------- puertas y paquete ----------
 
-function crearPuerta(color) {
-  const grupo = new THREE.Group();
-  const anillo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.022, 12, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(color) }));
-  const fondo = new THREE.Mesh(new THREE.CircleGeometry(0.33, 48), new THREE.MeshBasicMaterial({ color: 0x0c1628, transparent: true, opacity: 0.92 }));
-  fondo.position.z = -0.01;
-  const tubo = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.22, 0.6, 32, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false }));
-  tubo.rotation.x = Math.PI / 2;
-  tubo.position.z = -0.3;
-  grupo.add(fondo, anillo, tubo);
-  grupo.userData = { anillo };
-  return grupo;
-}
-
 function crearPaquete() {
   const grupo = new THREE.Group();
   const caja = new THREE.BoxGeometry(0.22, 0.22, 0.22);
@@ -186,25 +174,25 @@ AFRAME.registerComponent('router-humano', {
     this.crearBoton('fin', 'Nueva ronda', -0.33, -0.35, { ancho: 0.58, alto: 0.14, accion: 'nueva', estilo: 'principal' });
     this.crearBoton('fin', 'Menú de juegos', 0.33, -0.35, { ancho: 0.58, alto: 0.14, accion: 'menu' });
 
-    // puertas alrededor del jugador: anillo, dibujo y nombre
+    // puertas alrededor del jugador: marco de color, cuarto 3D detrás y letrero con dibujo y nombre
     this.puertas = {};
     window.ROUTER.destinos.forEach((d) => {
       const el = crearEntidad(this.el, { visible: false });
-      const grupo = crearPuerta(d.color);
+      const grupo = crearCuarto(d);
       el.setObject3D('mesh', grupo);
-      const dibujo = crearEntidad(el, { lienzo: 'ancho: 0.46; alto: 0.46', position: '0 0 0.01' });
-      const pintarDibujo = (img) => pintar(dibujo, (ctx, w, h) => { if (img) ctx.drawImage(img, w * 0.12, h * 0.12, w * 0.76, h * 0.76); });
-      pintarDibujo(imagenSVG(window.ROUTER.iconos[d.icono], pintarDibujo));
-      const etiqueta = crearEntidad(el, { lienzo: 'ancho: 0.82; alto: 0.15', position: '0 0.5 0' });
-      pintar(etiqueta, (ctx, w, h) => {
+      const etiqueta = crearEntidad(el, { lienzo: 'ancho: 0.86; alto: 0.17', position: `0 ${(CUARTO.alto / 2 + CUARTO.marco + 0.12).toFixed(3)} 0.04` });
+      const pintarEtiqueta = (img) => pintar(etiqueta, (ctx, w, h) => {
         rectRedondo(ctx, 4, 4, w - 8, h - 8, h / 2 - 4);
-        ctx.fillStyle = 'rgba(6, 8, 13, 0.9)';
+        ctx.fillStyle = 'rgba(6, 8, 13, 0.92)';
         ctx.fill();
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 5;
         ctx.strokeStyle = d.color;
         ctx.stroke();
-        texto(ctx, d.nombre, w / 2, h / 2 + 2, { tam: h * 0.52, peso: 700, color: COLOR.texto, alinear: 'center' });
+        const lado = h * 0.62;
+        if (img) ctx.drawImage(img, h * 0.38, (h - lado) / 2, lado, lado);
+        texto(ctx, d.nombre, w / 2 + h * 0.3, h / 2 + 2, { tam: h * 0.5, peso: 700, color: COLOR.texto, alinear: 'center' });
       });
+      pintarEtiqueta(imagenSVG(window.ROUTER.iconos[d.icono], pintarEtiqueta));
       el.addEventListener('mouseenter', () => el.object3D.scale.setScalar(1.12));
       el.addEventListener('mouseleave', () => el.object3D.scale.setScalar(1));
       el.addEventListener('click', () => {
@@ -300,6 +288,7 @@ AFRAME.registerComponent('router-humano', {
     this.dibujarTodo();
     this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Miren a su alrededor: ahí están las puertas', COLOR.acento);
     sonido.nivel();
+    rondaComun.empezar(modo);
   },
 
   nuevoPaquete() {
@@ -377,6 +366,10 @@ AFRAME.registerComponent('router-humano', {
   terminar() {
     this.lanzamiento = null;
     sonido.fin();
+    rondaComun.terminar();
+    this.registro = this.modo === 'ronda'
+      ? marcador.registrar('router', this.puntaje, `nivel ${this.nivel} · errores ${this.errores} · saltados ${this.saltados}`, () => this.dibujarResultado())
+      : null;
     this.dibujarResultado();
     this.mostrar('fin');
   },
@@ -384,7 +377,10 @@ AFRAME.registerComponent('router-humano', {
   tick(t) {
     // puertas latiendo y paquete flotando
     Object.values(this.puertas).forEach((p, i) => {
-      p.grupo.userData.anillo.scale.setScalar(1 + Math.sin(t / 400 + i) * 0.03);
+      const datos = p.grupo.userData;
+      datos.halo.material.opacity = 0.16 + Math.sin(t / 400 + i) * 0.08;
+      if (datos.lampara) datos.lampara.material.color.setHSL(0.11, 1, 0.78 + Math.sin(t / 900) * 0.04);
+      if (datos.animar && p.el.object3D.visible) datos.animar(t);
     });
     const obj = this.paqueteEl.object3D;
     if (!this.lanzamiento) {
@@ -417,6 +413,7 @@ AFRAME.registerComponent('router-humano', {
     if (segundo !== this.ultimoSegundo) {
       this.ultimoSegundo = segundo;
       this.dibujarBarra();
+      rondaComun.segundo((this.finRonda - ahora) / 1000, this.modo);
       const explicando = this.explicacion && ahora < this.explicacion.hasta + 1000;
       if ((this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) || explicando) this.dibujarInfo();
       if (this.mensaje && ahora > this.mensaje.hasta) {
@@ -502,18 +499,12 @@ AFRAME.registerComponent('router-humano', {
   },
 
   dibujarResultado() {
-    const practica = this.modo === 'practica';
-    pintar(this.lienzoResultado, (ctx, w, h) => {
-      fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.11, { tam: 54, peso: 700, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.25, { tam: 46, peso: 700, color: COLOR.bien, alinear: 'center' });
-      texto(ctx, `${this.puntaje}`, w / 2, h * 0.46, { tam: 160, peso: 700, alinear: 'center' });
-      texto(ctx, this.puntaje === 1 ? 'paquete entregado' : 'paquetes entregados', w / 2, h * 0.62, { tam: 40, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`, w / 2, h * 0.72, { tam: 34, color: COLOR.tenue, alinear: 'center' });
-      rectRedondo(ctx, 40, h * 0.8, w - 80, h * 0.15, 16);
-      ctx.fillStyle = '#13233D';
-      ctx.fill();
-      texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.875, { tam: 36, peso: 600, alinear: 'center' });
-    });
+    pintar(this.lienzoResultado, (ctx, w, h) => dibujarFinalRonda(ctx, w, h, {
+      practica: this.modo === 'practica',
+      puntaje: this.puntaje,
+      unidad: this.puntaje === 1 ? 'paquete entregado' : 'paquetes entregados',
+      detalle: `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`,
+      registro: this.registro,
+    }));
   },
 });

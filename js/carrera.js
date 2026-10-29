@@ -7,7 +7,7 @@
  *
  * Usa las piezas de comun.js (paneles, botones, sonidos).
  */
-/* global AFRAME, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores */
+/* global AFRAME, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, marcador, rondaComun, dibujarFinalRonda */
 
 const CONFIG = {
   segundosRonda: 180,
@@ -146,6 +146,7 @@ AFRAME.registerComponent('carrera-palabras', {
     this.mostrar('juego');
     this.dibujarTodo();
     this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Tienen 3 minutos', COLOR.acento);
+    rondaComun.empezar(modo);
     sonido.nivel();
   },
 
@@ -213,6 +214,10 @@ AFRAME.registerComponent('carrera-palabras', {
 
   terminar() {
     sonido.fin();
+    rondaComun.terminar();
+    this.registro = this.modo === 'ronda'
+      ? marcador.registrar('carrera', this.puntaje, `nivel ${this.nivel} · errores ${this.errores} · saltadas ${this.saltadas}`, () => this.dibujarResultado())
+      : null;
     this.dibujarResultado();
     this.mostrar('fin');
   },
@@ -229,6 +234,7 @@ AFRAME.registerComponent('carrera-palabras', {
     if (segundo !== this.ultimoSegundo) {
       this.ultimoSegundo = segundo;
       this.dibujarBarra();
+      rondaComun.segundo((this.finRonda - ahora) / 1000, this.modo);
       if (this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) this.dibujarBytes();
       if (this.mensaje && ahora > this.mensaje.hasta) {
         this.mensaje = null;
@@ -333,18 +339,12 @@ AFRAME.registerComponent('carrera-palabras', {
   },
 
   dibujarResultado() {
-    const practica = this.modo === 'practica';
-    pintar(this.lienzoResultado, (ctx, w, h) => {
-      fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.12, { tam: 64, peso: 800, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.27, { tam: 56, peso: 700, color: COLOR.bien, alinear: 'center' });
-      texto(ctx, `${this.puntaje}`, w / 2, h * 0.47, { tam: 190, peso: 800, alinear: 'center' });
-      texto(ctx, this.puntaje === 1 ? 'palabra descifrada' : 'palabras descifradas', w / 2, h * 0.62, { tam: 50, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltadas: ${this.saltadas}`, w / 2, h * 0.72, { tam: 42, color: COLOR.tenue, alinear: 'center' });
-      rectRedondo(ctx, 60, h * 0.79, w - 120, h * 0.16, 18);
-      ctx.fillStyle = '#13233D';
-      ctx.fill();
-      texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.87, { tam: 44, peso: 600, alinear: 'center' });
-    });
+    pintar(this.lienzoResultado, (ctx, w, h) => dibujarFinalRonda(ctx, w, h, {
+      practica: this.modo === 'practica',
+      puntaje: this.puntaje,
+      unidad: this.puntaje === 1 ? 'palabra descifrada' : 'palabras descifradas',
+      detalle: `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltadas: ${this.saltadas}`,
+      registro: this.registro,
+    }));
   },
 });

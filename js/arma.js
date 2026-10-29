@@ -7,25 +7,27 @@
  * Al completar la placa, la computadora "se enciende" y muestra el nombre de cada pieza.
  *
  * 1.ª placa: 4 lugares libres · 2.ª: 6 · desde la 3.ª: los 8. +1 por pieza bien puesta;
- * lugar equivocado o saltar: bloqueo de 5 segundos. Ronda de 3 minutos.
+ * lugar equivocado o saltar: bloqueo de 5 segundos. Ronda de 5 minutos.
  * Datos y dibujos: js/computadora_datos.js (lo genera prototipo_papel/generar_arma.py).
  */
-/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola, imagenSVG, azarConSemilla, irA */
+/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola, imagenSVG, azarConSemilla, irA, marcador, rondaComun, dibujarFinalRonda */
 
 const CONFIG = {
-  segundosRonda: 180,
+  segundosRonda: 300,
   segundosBloqueo: 5,
   segundosEncendida: 3.2,
   radioPiezas: 2.1,
-  tamPieza: 0.4,
+  tamPieza: 0.46,
   // la placa (metros): centro, ancho y alto, y tamaño de cada lugar
   placa: { x: 0, y: 1.9, z: -2.4, ancho: 2, alto: 1.3, lugar: 0.26 },
 };
 
-// lugares alrededor del jugador (grados, + = derecha) y altura: a los lados, nunca atrás
+// lugares alrededor del jugador (grados, + = derecha) y altura. Todos quedan ARRIBA de la altura de
+// los ojos (1.2 m), así la consola no los tapa, y a menos de 80° (no hay que voltear hacia atrás).
+// Dos filas por lado; la placa ocupa el centro (±23°).
 const LUGARES = [
-  { a: -100, y: 1.05 }, { a: -74, y: 1.55 }, { a: -50, y: 1.05 }, { a: -30, y: 1.0 },
-  { a: 30, y: 1.0 }, { a: 50, y: 1.05 }, { a: 74, y: 1.55 }, { a: 100, y: 1.05 },
+  { a: -78, y: 1.4 }, { a: -64, y: 1.95 }, { a: -50, y: 1.4 }, { a: -37, y: 1.95 },
+  { a: 37, y: 1.95 }, { a: 50, y: 1.4 }, { a: 64, y: 1.95 }, { a: 78, y: 1.4 },
 ];
 
 const barajar = (lista) => lista.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
@@ -88,7 +90,7 @@ AFRAME.registerComponent('arma-computadora', {
     const ini = this.pantallas.inicio;
     this.lienzoTitulo = crearEntidad(ini, { lienzo: 'ancho: 1.5; alto: 0.5', position: '0 0.2 0' });
     this.crearBoton('inicio', 'Practicar (sin tiempo)', -0.5, -0.17, { ancho: 0.46, alto: 0.14, accion: 'practicar' });
-    this.crearBoton('inicio', 'Empezar ronda · 3 min', 0.02, -0.17, { ancho: 0.5, alto: 0.14, accion: 'empezar', estilo: 'principal' });
+    this.crearBoton('inicio', 'Empezar ronda · 5 min', 0.02, -0.17, { ancho: 0.5, alto: 0.14, accion: 'empezar', estilo: 'principal' });
     this.crearBoton('inicio', 'Menú de juegos', 0.53, -0.17, { ancho: 0.44, alto: 0.14, accion: 'menu' });
     this.lienzoSeguridad = crearEntidad(ini, { lienzo: 'ancho: 1.5; alto: 0.14', position: '0 -0.37 0' });
 
@@ -190,6 +192,7 @@ AFRAME.registerComponent('arma-computadora', {
     this.nuevaPlaca();
     this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Díganle al equipo el modelo de la placa', COLOR.acento);
     sonido.nivel();
+    rondaComun.empezar(modo);
   },
 
   /** Otra placa: modelo al azar (distinto al anterior) y algunos lugares libres; las piezas faltantes, alrededor. */
@@ -295,6 +298,10 @@ AFRAME.registerComponent('arma-computadora', {
     }
     this.encendida = null;
     sonido.fin();
+    rondaComun.terminar();
+    this.registro = this.modo === 'ronda'
+      ? marcador.registrar('arma', this.puntaje, `armadas ${this.armadas} · errores ${this.errores} · saltadas ${this.saltados}`, () => this.dibujarResultado())
+      : null;
     this.dibujarResultado();
     this.mostrar('fin');
   },
@@ -336,6 +343,7 @@ AFRAME.registerComponent('arma-computadora', {
     if (segundo !== this.ultimoSegundo) {
       this.ultimoSegundo = segundo;
       this.dibujarBarra();
+      rondaComun.segundo((this.finRonda - ahora) / 1000, this.modo);
       if (this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) this.dibujarInfo();
       if (this.mensaje && ahora > this.mensaje.hasta) {
         this.mensaje = null;
@@ -510,18 +518,12 @@ AFRAME.registerComponent('arma-computadora', {
   },
 
   dibujarResultado() {
-    const practica = this.modo === 'practica';
-    pintar(this.lienzoResultado, (ctx, w, h) => {
-      fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.11, { tam: 54, peso: 700, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.25, { tam: 46, peso: 700, color: COLOR.bien, alinear: 'center' });
-      texto(ctx, `${this.puntaje}`, w / 2, h * 0.46, { tam: 160, peso: 700, alinear: 'center' });
-      texto(ctx, this.puntaje === 1 ? 'pieza instalada' : 'piezas instaladas', w / 2, h * 0.62, { tam: 40, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, `Computadoras armadas: ${this.armadas} · Errores: ${this.errores} · Placas saltadas: ${this.saltados}`, w / 2, h * 0.72, { tam: 34, color: COLOR.tenue, alinear: 'center' });
-      rectRedondo(ctx, 40, h * 0.8, w - 80, h * 0.15, 16);
-      ctx.fillStyle = '#13233D';
-      ctx.fill();
-      texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.875, { tam: 36, peso: 600, alinear: 'center' });
-    });
+    pintar(this.lienzoResultado, (ctx, w, h) => dibujarFinalRonda(ctx, w, h, {
+      practica: this.modo === 'practica',
+      puntaje: this.puntaje,
+      unidad: this.puntaje === 1 ? 'pieza instalada' : 'piezas instaladas',
+      detalle: `Computadoras armadas: ${this.armadas} · Errores: ${this.errores} · Placas saltadas: ${this.saltados}`,
+      registro: this.registro,
+    }));
   },
 });

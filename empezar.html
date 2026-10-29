@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enlace VR · Cómo empezar</title>
+  <meta name="description" content="Instrucciones cortas de Enlace VR: cómo explicarlo en un minuto, 3 pasos por juego y la hoja de puntajes del equipo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --negro: #06080D; --marino: #0B1F3A; --panel: #0C1628; --panel-2: #102039;
+      --acento: #5AA9FF; --acento-2: #2F6FBF; --blanco: #F2F4F8; --gris: #8B95A7; --gris-2: #5E6B80;
+      --bien: #3DDC97; --mal: #FF5C6C; --linea: rgba(242, 244, 248, .12);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif; font-size: 18px; line-height: 1.5; color: var(--blanco); background: linear-gradient(180deg, var(--marino) 0%, var(--negro) 460px) var(--negro); }
+    main { max-width: 940px; margin: 0 auto; padding: 32px 16px 80px; }
+    a { color: var(--acento); }
+    .barra { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+    .marca { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .marca svg { width: 52px; height: 24px; flex: none; }
+    .marca b { font-size: 26px; letter-spacing: -.5px; }
+    .marca b span { color: var(--acento); }
+    h1 { font-size: clamp(36px, 8vw, 58px); line-height: 1.05; margin: 26px 0 8px; letter-spacing: -1px; }
+    .sub { color: var(--gris); margin: 0 0 28px; max-width: 640px; }
+    h2 { font-size: 26px; margin: 44px 0 14px; }
+    .etq { font: 500 13px "IBM Plex Mono", monospace; color: var(--acento); letter-spacing: .3px; }
+    .boton { font: 600 15px "Space Grotesk", system-ui, sans-serif; cursor: pointer; text-decoration: none; padding: 11px 18px; border-radius: 10px; color: var(--blanco); background: transparent; border: 1px solid var(--linea); }
+    .boton.principal { background: var(--acento-2); border-color: var(--acento-2); }
+    .boton:hover { border-color: var(--acento); }
+
+    /* la idea en un dibujo animado */
+    .idea { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--linea); border-radius: 16px; padding: 24px; }
+    .rol { text-align: center; }
+    .rol svg { width: 96px; height: 96px; }
+    .rol h3 { margin: 8px 0 2px; font-size: 22px; }
+    .rol p { margin: 0; color: var(--gris); font-size: 16px; }
+    .enlace { width: clamp(70px, 16vw, 180px); height: 30px; }
+    .enlace line { stroke-dasharray: 8 8; animation: corre 1s linear infinite; }
+    @keyframes corre { to { stroke-dashoffset: -16; } }
+    @media (prefers-reduced-motion: reduce) { .enlace line { animation: none; } }
+
+    /* guion de un minuto */
+    .guion { margin-top: 16px; background: var(--panel-2); border-left: 4px solid var(--acento); border-radius: 0 14px 14px 0; padding: 18px 22px; font-size: 20px; }
+    .guion p { margin: 0 0 8px; }
+    .guion p:last-child { margin: 0; }
+
+    /* pasos numerados */
+    .pasos { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; counter-reset: paso; }
+    .pasos li { counter-increment: paso; display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; background: var(--panel); border: 1px solid var(--linea); border-radius: 12px; padding: 14px 16px; }
+    .pasos li::before { content: counter(paso); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--acento-2); font-weight: 700; }
+    .pasos b { color: var(--blanco); }
+    .pasos span { color: var(--gris); }
+
+    /* juegos */
+    .juegos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+    .juego { background: var(--panel); border: 1px solid var(--linea); border-radius: 14px; padding: 18px 20px; }
+    .juego h3 { margin: 4px 0 10px; font-size: 22px; }
+    .juego ol { margin: 0; padding-left: 20px; }
+    .juego li { margin-bottom: 6px; }
+    .quien { font-weight: 700; color: var(--acento); }
+    .juego .pie { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--linea); color: var(--gris); font-size: 15px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+    .reglas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+    .regla { background: var(--panel); border: 1px solid var(--linea); border-radius: 12px; padding: 14px 16px; }
+    .regla b { display: block; font-size: 18px; }
+    .regla span { color: var(--gris); font-size: 16px; }
+
+    /* hoja de puntajes (se imprime en su propia página) */
+    .hoja { background: #fff; color: #0B1F3A; border-radius: 14px; padding: 26px; }
+    .hoja h3 { margin: 0; font-size: 24px; }
+    .hoja .datos { display: flex; flex-wrap: wrap; gap: 8px 30px; margin: 12px 0 16px; font-size: 16px; }
+    .hoja table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    .hoja th { text-align: left; background: #0B1F3A; color: #fff; padding: 8px; font-weight: 600; }
+    .hoja td { border: 1px solid #9AA6B8; height: 44px; padding: 4px 8px; }
+    .hoja td.ronda { width: 56px; text-align: center; font-weight: 700; }
+    .hoja td.cod { font: 500 20px "IBM Plex Mono", monospace; color: #9AA6B8; letter-spacing: 2px; }
+    .hoja .nota { font-size: 14px; color: #3B4A60; margin: 12px 0 0; }
+
+    @media (max-width: 560px) {
+      .idea { grid-template-columns: 1fr; }
+      .enlace { transform: rotate(90deg); margin: 0 auto; }
+      .hoja { padding: 16px; overflow-x: auto; }
+    }
+    @media print {
+      body { background: #fff; color: #0B1F3A; font-size: 12pt; }
+      .no-imprimir { display: none !important; }
+      main { padding: 0; max-width: none; }
+      .idea, .pasos li, .juego, .regla, .guion { background: #fff; border-color: #C5CEDB; color: #0B1F3A; }
+      .rol p, .pasos span, .juego .pie, .regla span, .sub { color: #3B4A60; }
+      .pasos b, .marca b { color: #0B1F3A; }
+      h2 { margin-top: 18px; break-after: avoid; }
+      .juego, .regla { break-inside: avoid; }
+      .hoja { break-before: page; padding: 0; }
+      .enlace line { animation: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="barra">
+    <a class="marca" href="index.html" aria-label="Enlace VR, volver al menú">
+      <svg viewBox="0 0 64 30" aria-hidden="true"><circle cx="9" cy="15" r="7" fill="none" stroke="#5E6B80" stroke-width="3"/><circle cx="55" cy="15" r="7" fill="#5AA9FF"/><line x1="19" y1="15" x2="45" y2="15" stroke="#8B95A7" stroke-width="3" stroke-dasharray="5 4"/></svg>
+      <b>enlace<span>vr</span></b>
+    </a>
+    <div class="no-imprimir" style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <a class="boton" href="index.html">Menú de juegos</a>
+      <button class="boton principal" type="button" onclick="window.print()">Imprimir (2 hojas)</button>
+    </div>
+  </div>
+
+  <h1>Cómo empezar</h1>
+  <p class="sub">Todo lo que hace falta para la primera sesión. Los instructivos largos (en <a href="material.html">Material para imprimir</a>) son solo para quien quiera más detalle.</p>
+
+  <!-- la idea en un dibujo -->
+  <div class="idea" role="img" aria-label="El Operador usa el visor y ve el reto; el equipo tiene el manual y sabe resolverlo. Se comunican hablando.">
+    <div class="rol">
+      <svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="44" fill="#102039" stroke="#5AA9FF" stroke-width="3"/><rect x="22" y="38" width="52" height="22" rx="8" fill="#5AA9FF"/><circle cx="36" cy="49" r="5" fill="#06080D"/><circle cx="60" cy="49" r="5" fill="#06080D"/><path d="M22 46h-6M74 46h6" stroke="#5AA9FF" stroke-width="4" stroke-linecap="round"/></svg>
+      <h3>Operador</h3>
+      <p>Se pone el visor. <b>Ve</b> el reto, pero no sabe resolverlo.</p>
+    </div>
+    <svg class="enlace" viewBox="0 0 180 30" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="15" x2="180" y2="15" stroke="#5AA9FF" stroke-width="4"/></svg>
+    <div class="rol">
+      <svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="44" fill="#102039" stroke="#8B95A7" stroke-width="3"/><path d="M26 30h20a6 6 0 0 1 6 6v32a5 5 0 0 0-5-5H26zM70 30H50a6 6 0 0 0-6 6v32a5 5 0 0 1 5-5h21z" fill="#F2F4F8"/><path d="M31 40h10M31 48h10M55 40h10M55 48h10" stroke="#0B1F3A" stroke-width="3"/></svg>
+      <h3>Equipo</h3>
+      <p>Tiene el manual impreso. <b>Sabe</b> resolverlo, pero no ve nada.</p>
+    </div>
+  </div>
+
+  <h2>Explícalo en un minuto</h2>
+  <p class="etq">LÉELO EN VOZ ALTA</p>
+  <div class="guion">
+    <p>"Uno de ustedes se pone el visor: es el <b>Operador</b>. Ve el reto, pero no sabe cómo resolverlo."</p>
+    <p>"Los demás tienen el <b>manual</b>: saben resolverlo, pero no ven nada. Solo hablando lo logran."</p>
+    <p>"Al final de la ronda, el visor da un <b>puntaje y un código</b>. Anótenlos en su hoja y pasen el visor al siguiente."</p>
+  </div>
+
+  <h2>Antes de la clase</h2>
+  <ol class="pasos">
+    <li><div><b>Carga los visores</b> y abre el sitio en cada uno: <span>mparra37.github.io/ITC-VR-Games</span></div></li>
+    <li><div><b>Elige el equipo de cada visor</b> en el menú (botones 1 a 8). <span>Queda guardado en el visor.</span></div></li>
+    <li><div><b>Imprime por equipo</b> el manual del juego y la hoja de puntajes de abajo. <span>Ver <a href="material.html">Material para imprimir</a>.</span></div></li>
+  </ol>
+
+  <h2>Cada ronda</h2>
+  <ol class="pasos">
+    <li><div><b>Práctica</b> la primera vez <span>(sin tiempo, para aprender a apuntar con el gatillo).</span></div></li>
+    <li><div><b>Empezar ronda</b> <span>cuando el profesor diga "¡Ya!".</span></div></li>
+    <li><div><b>Anoten puntaje y código</b> en su hoja <span>y cambien de Operador: el visor se pasa con las dos manos.</span></div></li>
+  </ol>
+
+  <h2>Los juegos en 3 pasos</h2>
+  <div class="juegos">
+    <article class="juego">
+      <span class="etq">REDES · 3 MIN</span>
+      <h3>Router humano</h3>
+      <ol>
+        <li><span class="quien">Operador:</span> lee los números azules de la IP.</li>
+        <li><span class="quien">Equipo:</span> busca esa red en la tabla y dice la puerta.</li>
+        <li><span class="quien">Operador:</span> voltea y dispara a esa puerta.</li>
+      </ol>
+      <div class="pie"><span>+1 por paquete</span><span>Hay que voltear</span></div>
+    </article>
+    <article class="juego">
+      <span class="etq">HARDWARE · 5 MIN</span>
+      <h3>Arma la computadora</h3>
+      <ol>
+        <li><span class="quien">Operador:</span> dice la placa (A, B o C), toma una pieza y la describe.</li>
+        <li><span class="quien">Equipo:</span> la encuentra en el catálogo y dice el número.</li>
+        <li><span class="quien">Operador:</span> apunta a ese número en la placa.</li>
+      </ol>
+      <div class="pie"><span>+1 por pieza</span><span>Hay que voltear</span></div>
+    </article>
+    <article class="juego">
+      <span class="etq">BINARIO Y ASCII · 3 MIN</span>
+      <h3>Carrera de palabras</h3>
+      <ol>
+        <li><span class="quien">Operador:</span> dicta los ceros y unos de cada letra.</li>
+        <li><span class="quien">Equipo:</span> busca la letra en la tabla del manual.</li>
+        <li><span class="quien">Operador:</span> escribe la letra en el teclado.</li>
+      </ol>
+      <div class="pie"><span>+1 por palabra</span><span>Todo enfrente</span></div>
+    </article>
+    <article class="juego">
+      <span class="etq">ALGORITMOS · 3 MIN</span>
+      <h3>Robot programado</h3>
+      <ol>
+        <li><span class="quien">Operador:</span> dice el número de programa, la casilla de inicio y hacia dónde mira el robot.</li>
+        <li><span class="quien">Equipo:</span> sigue el programa en su tablero de papel.</li>
+        <li><span class="quien">Operador:</span> toca la casilla donde termina y Enviar.</li>
+      </ol>
+      <div class="pie"><span>+1 por programa</span><span>Todo enfrente</span></div>
+    </article>
+    <article class="juego">
+      <span class="etq">ESCAPE ROOM · 12 MIN</span>
+      <h3>Laboratorio NOC-7</h3>
+      <ol>
+        <li><span class="quien">Operador:</span> lee el reto de la sala (números en binario).</li>
+        <li><span class="quien">Equipo:</span> lo resuelve con su hoja de soporte.</li>
+        <li><span class="quien">Operador:</span> escribe la respuesta y jala la palanca. Cambian de Operador en cada sala.</li>
+      </ol>
+      <div class="pie"><span>Puntos + bono por rapidez</span><span>4 salas</span></div>
+    </article>
+  </div>
+
+  <h2>Tres reglas</h2>
+  <div class="reglas">
+    <div class="regla"><b>Sentados</b><span>Se gira la cabeza, no se camina. Correa del control en la muñeca.</span></div>
+    <div class="regla"><b>¡Enlace caído!</b><span>Si fallan: 5 segundos sin hablar. Equivocarse cuesta tiempo.</span></div>
+    <div class="regla"><b>Solo hablando</b><span>El equipo no ve el visor y el Operador no ve el manual.</span></div>
+  </div>
+
+  <h2 class="no-imprimir">Hoja de puntajes del equipo</h2>
+  <div class="hoja">
+    <h3>Enlace VR · Hoja de puntajes</h3>
+    <div class="datos"><span>Equipo: ______</span><span>Integrantes: ___________________________________________</span><span>Fecha: __________</span></div>
+    <table>
+      <thead><tr><th>Ronda</th><th>Juego</th><th>Operador</th><th>Puntaje</th><th>Código del visor</th></tr></thead>
+      <tbody id="filas-hoja"></tbody>
+    </table>
+    <p class="nota">Copien el código exactamente como sale en el visor (8 letras, por ejemplo <b>43W8-GEYW</b>). El profesor lo verifica: si el puntaje no coincide con el código, la ronda no cuenta.</p>
+  </div>
+</main>
+<script>
+  document.getElementById('filas-hoja').innerHTML = Array.from({ length: 8 }, (_, i) =>
+    `<tr><td class="ronda">${i + 1}</td><td></td><td></td><td></td><td class="cod">____ - ____</td></tr>`).join('');
+</script>
+</body>
+</html>
