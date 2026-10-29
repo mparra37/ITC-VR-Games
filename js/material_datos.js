@@ -236,6 +236,42 @@ window.MATERIAL = {
    ]
   },
   {
+   "nombre": "Programa al robot",
+   "tema": "Relevo individual · algoritmos",
+   "pagina": "programa.html",
+   "zip": "material/programa_robot/programa_robot_material.zip",
+   "zip_kb": 273,
+   "archivos": [
+    {
+     "titulo": "Instructivo del profesor",
+     "para_que": "Cómo se juega, qué aprenden y preguntas de reflexión",
+     "cuantos": "1",
+     "visor": true,
+     "archivo": "material/programa_robot/01_Instructivo_del_profesor.pdf",
+     "paginas": 2,
+     "kb": 82
+    },
+    {
+     "titulo": "Marcador y orden de turnos",
+     "para_que": "Marcador del relevo y orden en que pasan el visor",
+     "cuantos": "1 (y la hoja de orden, 1 por equipo)",
+     "visor": true,
+     "archivo": "material/programa_robot/02_Marcador_y_orden_de_turnos.pdf",
+     "paginas": 2,
+     "kb": 51
+    },
+    {
+     "titulo": "Retos para practicar en papel",
+     "para_que": "6 tableros para practicar mientras esperan su turno, con clave",
+     "cuantos": "1 por equipo",
+     "visor": false,
+     "archivo": "material/programa_robot/03_Retos_para_practicar_en_papel.pdf",
+     "paginas": 3,
+     "kb": 119
+    }
+   ]
+  },
+  {
    "nombre": "Laboratorio NOC-7",
    "tema": "Escape room · binario, ASCII y lógica",
    "pagina": "noc7.html",

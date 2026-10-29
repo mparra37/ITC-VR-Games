@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enlace VR · Programa al robot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/marcador.js"></script>
+  <script src="js/programa_datos.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/programa.js"></script>
+  <style>
+    .ayuda-2d {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10; max-width: calc(100% - 24px);
+      font: 14px/1.4 "Space Grotesk", "Segoe UI", system-ui, sans-serif; color: #F2F4F8;
+      background: rgba(6, 8, 13, .9); border: 1px solid rgba(90, 169, 255, .45); padding: 8px 12px; border-radius: 10px;
+    }
+    .ayuda-2d a { color: #5AA9FF; }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #06080D" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <!-- ciudad futurista, cielo con estrellas y partículas de datos -->
+    <a-entity ambiente-futurista></a-entity>
+
+    <!-- luz para el robot y el tablero -->
+    <a-entity light="type: ambient; color: #b9cdf0; intensity: 0.9"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 1.4" position="1 3 1.5"></a-entity>
+    <a-entity light="type: point; color: #5AA9FF; intensity: 0.6; distance: 5" position="0 2 -2"></a-entity>
+
+    <!-- jugador sentado: cámara y los dos controles con apuntador láser -->
+    <a-entity id="jugador">
+      <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #5AA9FF"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #5AA9FF"></a-entity>
+    </a-entity>
+
+    <!-- el juego: tablero enfrente, pantalla arriba y consola de bloques abajo -->
+    <a-entity id="juego" programa-robot></a-entity>
+  </a-scene>
+
+  <div class="ayuda-2d">Modo 2D: arrastra para mirar (los bloques están abajo, el tablero enfrente). Teclado: ↑ avanza, ← gira a la izquierda, → gira a la derecha, 2 y 3 = repetir, Retroceso = borrar, Enter = ejecutar o empezar el siguiente turno. En el visor, toca "VR". · <a href="index.html">Menú</a></div>
+</body>
+</html>

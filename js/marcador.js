@@ -11,9 +11,9 @@
 // manda solo a Google Sheets. Lo que no se pudo mandar se guarda y se reintenta al abrir otro juego.
 
 const JUEGOS_MARCADOR = {
-  1: 'Router humano', 2: 'Arma la computadora', 3: 'Carrera de palabras', 4: 'Robot programado', 5: 'Laboratorio NOC-7',
+  1: 'Router humano', 2: 'Arma la computadora', 3: 'Carrera de palabras', 4: 'Robot programado', 5: 'Laboratorio NOC-7', 6: 'Programa al robot',
 };
-const ID_JUEGO = { router: 1, arma: 2, carrera: 3, robot: 4, noc7: 5 };
+const ID_JUEGO = { router: 1, arma: 2, carrera: 3, robot: 4, noc7: 5, programa: 6 };
 const LETRAS_CODIGO = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // sin I, L, O ni U para no confundir
 
 /** Huella de 32 bits de un texto (FNV-1a). */

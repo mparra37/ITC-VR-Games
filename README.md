@@ -20,7 +20,7 @@ Same rules in every game:
 
 | Rule | Value |
 | --- | --- |
-| Round length | 3 minutes (or untimed practice mode); Laboratorio NOC-7 is a ~12-minute escape room with its own scoring |
+| Round length | 3 minutes (or untimed practice mode); Laboratorio NOC-7 is a ~12-minute escape room and Programa al robot an 8-minute individual relay |
 | Correct answer | +1 point |
 | Wrong answer or skip | 5-second lockout ("¡Enlace caído!", link down): nobody talks |
 | Levels | 3, getting harder as the team scores |
@@ -36,6 +36,7 @@ A class of about 25 students can share 6 headsets: teams play in sync, one Opera
 | `arma.html` | **Arma la computadora** (Build the Computer) | Hardware | A guided puzzle. The Operator sees an empty motherboard with numbered slots (model A, B or C) and the missing parts floating around as **drawings without names**. They grab a part and describe it; the team recognizes it in the parts catalog, finds it on the assembled plan for that board, and says the slot number. When the board is complete, the computer "boots" and shows every part's name. |
 | `carrera.html` | **Carrera de palabras** (Word Race) | Binary and ASCII | A word in binary, one byte per letter; the team decodes it and the Operator types it. |
 | `robot.html` | **Robot programado** (Programmed Robot) | Algorithms | Follow a short program (forward, turn, repeat) on a 4 × 4 board and pick the square where the robot ends. |
+| `programa.html` | **Programa al robot** (Program the Robot) | Algorithms (individual relay) | Unlike the other games, this one is played **alone**: the player builds a program with blocks (forward, turn left, turn right and, from level 3, ×2 / ×3 repeat) to take the robot to the goal on a 5 × 5 board with boxes. Reaching the goal plays a loud fanfare ("¡SIGUIENTE!") the whole room hears, and the headset passes to the next teammate, who gets a harder puzzle. 90 seconds per turn, 8 minutes per team; score = puzzles solved. |
 | `noc7.html` | **Laboratorio NOC-7** (NOC-7 Lab) | Escape room: binary, ASCII, logic | A 4-room escape room (about 12 minutes per team, its own scoring). Room 1: an IP address in binary → type it in decimal. Room 2: spell a word in binary with 8 light bulbs (ASCII). Room 3: variables a, b, c in binary → decimal. Room 4: true or false with a, b, c. Each solved room lights a lever on the right; pulling it opens the door, fades to black and pauses so the team can switch Operators. Values are random every game, so teams can't copy each other. |
 
 ## Printable material
@@ -44,6 +45,7 @@ Everything needed to run a session is in the site itself: open **Material para i
 
 - **Guía rápida del profesor** (teacher's quick guide): preparation checklist, room setup, the headset hand-off ritual, a 60-minute session plan, scoring and troubleshooting. It applies to every game.
 - **Per game:** teacher guide, student rules, Field Manual for the decoders, answer key, scoreboard and play-order sheet, plus extra sheets some games need.
+- **Programa al robot:** teacher guide, scoreboard with turn order, and grid puzzles to practice on paper while waiting.
 - **Laboratorio NOC-7:** teacher guide, the support-team sheet (powers of 2, ASCII table and what to do in each room) and its own scoreboard.
 - **For playing without a headset:** Operator cards (Router, Word Race, Robot) and a cut-out paper puzzle (Build the Computer).
 - Each game also has a **ZIP** with all its PDFs.
@@ -66,6 +68,7 @@ Then open `http://localhost:8090/`. Click and drag to look around. Keyboard shor
 | Arma la computadora | click a part, then click its slot (or `1`–`8` for the slot) |
 | Carrera de palabras | letters, `Backspace`, `Enter` |
 | Robot programado | type the square (e.g. `c2`) + `Enter` |
+| Programa al robot | `↑` forward, `←` / `→` turn, `2` / `3` repeat, `Backspace` delete, `Enter` run or start the next turn |
 | Laboratorio NOC-7 | digits, `Backspace`, `Enter`; `1`–`8` = bulbs; `V`/`F` = true/false; `R` = reset for the next team |
 
 If you don't see your changes after editing a file, reload the page: browsers often cache the old JavaScript.
@@ -106,7 +109,7 @@ When the page changes, the Quest Browser usually re-enters VR by itself. If it d
 | `*.html` + `js/<game>.js` | One page and one script per game |
 | `js/menu.js` | The list of games used by both menus: add a new game here |
 | `js/comun.js` | Shared pieces: colors and fonts of the identity, canvas text panels, buttons, sounds, environments, SVG drawing |
-| `js/router_datos.js`, `js/computadora_datos.js`, `js/palabras.js`, `js/robot_programas.js`, `js/noc7_datos.js`, `js/material_datos.js` | Game data and drawings (**generated**, don't edit by hand) |
+| `js/router_datos.js`, `js/computadora_datos.js`, `js/palabras.js`, `js/robot_programas.js`, `js/noc7_datos.js`, `js/programa_datos.js`, `js/material_datos.js` | Game data and drawings (**generated**, don't edit by hand) |
 
 All text in the scenes is drawn on canvas textures, so Spanish accents render correctly in VR.
 

@@ -12,6 +12,7 @@ window.MINIJUEGOS = [
   { archivo: 'arma.html', area: 'Hardware', titulo: 'Arma la computadora', texto: 'Un rompecabezas: el equipo tiene el plano y guía dónde va cada pieza.', nivel: 'Fácil · 5 min', voltear: true },
   { archivo: 'carrera.html', area: 'Binario y ASCII', titulo: 'Carrera de palabras', texto: 'Traduzcan palabras escritas en binario, letra por letra.', nivel: 'Media', voltear: false },
   { archivo: 'robot.html', area: 'Algoritmos', titulo: 'Robot programado', texto: 'Sigan el programa paso a paso y digan dónde termina el robot.', nivel: 'Fácil', voltear: false },
+  { archivo: 'programa.html', area: 'Relevo · algoritmos', titulo: 'Programa al robot', texto: 'Cada quien arma su programa para llevar al robot a la meta. ¡Al lograrlo, pasa el visor!', nivel: 'Individual · 8 min', voltear: false },
   { archivo: 'noc7.html', area: 'Escape room', titulo: 'Laboratorio NOC-7', texto: 'Cuatro salas de binario, ASCII y lógica. Resuelvan cada reto y jalen la palanca.', nivel: 'Media · 12 min', voltear: true },
 ];
 

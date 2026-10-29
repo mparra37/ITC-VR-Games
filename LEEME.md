@@ -10,11 +10,12 @@
 | `arma.html` | Arma la computadora (hardware): un rompecabezas guiado, hay que voltear a buscar las piezas |
 | `carrera.html` | Carrera de palabras (binario a ASCII) |
 | `robot.html` | Robot programado (algoritmos), con fondo de ciudad |
+| `programa.html` | Programa al robot: relevo individual (algoritmos). Cada alumno arma su programa con bloques; al llegar a la meta suena "¡SIGUIENTE!" y pasa el visor |
 | `noc7.html` | Laboratorio NOC-7: escape room de 4 salas (binario, ASCII y lógica), basado en la versión original de `C:\dev\VR` |
 | `js/menu.js` | La lista de juegos que usan los dos menús. Para agregar un juego nuevo al menú, basta con agregarlo aquí |
 | `js/comun.js` | Piezas que comparten los juegos: colores y letras de la identidad, paneles, botones, sonidos, fondos y dibujos SVG |
 | `js/router.js`, `js/arma.js`, `js/carrera.js`, `js/robot.js`, `js/noc7.js` | La lógica de cada juego |
-| `js/router_datos.js`, `js/computadora_datos.js`, `js/palabras.js`, `js/robot_programas.js`, `js/noc7_datos.js`, `js/material_datos.js` | Datos y dibujos de cada juego (se generan solos, no editar a mano) |
+| `js/router_datos.js`, `js/computadora_datos.js`, `js/palabras.js`, `js/robot_programas.js`, `js/noc7_datos.js`, `js/programa_datos.js`, `js/material_datos.js` | Datos y dibujos de cada juego (se generan solos, no editar a mano) |
 
 ## Identidad
 
@@ -27,6 +28,7 @@ Todos los juegos usan las mismas reglas: al abrirlos hay tres botones, **Practic
 - **Router humano:** llega un paquete con una dirección IP. Como en un sobre, los 3 primeros números son la **red** (la calle) y el último es el **equipo** (el número de casa); el visor pinta la red en azul y el equipo en gris. El Operador le dicta la red al equipo, el equipo la busca en la tabla de rutas y le dice la puerta (SALÓN, BIBLIOTECA, INTERNET, SERVIDORES, LABORATORIO o BASURA, cada una con su dibujo). El Operador voltea y le dispara el paquete. Después de cada respuesta, la consola explica por qué ("La red 192.168.1 está en la tabla → SALÓN"). Nivel 2: redes parecidas (192.168.12 no es 192.168.1). Nivel 3: direcciones imposibles (un número mayor que 255 → BASURA) y las puertas cambian de lugar.
 - **Arma la computadora:** enfrente hay una placa con lugares numerados y su modelo (A, B o C). Las piezas que faltan flotan alrededor como **dibujos sin nombre**. El Operador toma una pieza (apunta y gatillo), se la describe al equipo, y el equipo, con el catálogo y el plano armado de esa placa, le dice el número. El Operador apunta a ese número y la pieza vuela a su lugar. Al completar la placa, la computadora "se enciende" y muestra el nombre de cada pieza. La 1.ª placa tiene 4 lugares libres, la 2.ª 6 y desde la 3.ª los 8.
 - **Carrera de palabras:** una palabra en binario, un byte por letra. El Operador escribe las letras con el teclado de la pantalla y presiona **Enviar**.
+- **Programa al robot** (relevo individual, 8 minutos por equipo, 90 segundos por turno): a diferencia de los demás, se juega **solo**. En un tablero de 5 × 5 hay un robot, cajas y una meta verde. Con los bloques de la consola de abajo (Avanza, Gira a la izquierda, Gira a la derecha y, desde el nivel 3, ×2 / ×3 = repite el bloque que sigue) el Operador arma el programa y toca Ejecutar. Si llega a la meta suena una fanfarria fuerte, "¡SIGUIENTE!", y el visor pasa al siguiente, que recibe un reto más difícil. Si se acaba el turno suena una chicharra y también pasa el visor. Puntaje: retos resueltos.
 - **Laboratorio NOC-7** (escape room, unos 12 minutos por equipo, con puntos propios): 4 salas en orden. Sala 1: una IP en binario → escribirla en decimal. Sala 2: deletrear una palabra en binario con 8 focos (ASCII). Sala 3: a, b y c en binario → decimal. Sala 4: verdadero o falso con a, b y c (se muestran en binario: el equipo usa lo que anotó). Al resolver cada sala se enciende la palanca a la derecha; al jalarla se abre la puerta, hay un fundido a negro y una pausa para cambiar de Operador. Los números cambian en cada partida. La hoja del equipo de soporte trae las tablas de potencias de 2 y ASCII.
 - **Robot programado:** el panel dice el número de programa, la casilla de inicio y hacia dónde mira el robot. El Operador toca la casilla donde termina y presiona **Enviar**. Al acertar, el robot recorre el programa y deja un rastro. Nivel 3 = programas con "Repite".
 
@@ -38,6 +40,7 @@ Abre `index.html` con doble clic (necesita internet para cargar A-Frame y las le
 - Arma la computadora: arrastra para mirar, haz clic en una pieza y luego en su lugar de la placa (o teclas 1 a 8 para el lugar).
 - Carrera de palabras: mouse, o teclado (letras, Retroceso = Borrar, Enter = Enviar).
 - Robot programado: mouse, o escribe la casilla (por ejemplo `c2`) y Enter.
+- Programa al robot: flecha ↑ = avanza, ← y → = girar, 2 y 3 = repetir, Retroceso = borrar, Enter = ejecutar o empezar el siguiente turno.
 - Laboratorio NOC-7: números, Retroceso y Enter; 1 a 8 = focos; V/F = verdadero o falso; R = reiniciar para el siguiente equipo.
 
 Si después de actualizar los archivos no ves los cambios (en la computadora o en el visor), recarga la página: el navegador a veces guarda la versión anterior.
@@ -66,7 +69,7 @@ Al cambiar de página, el navegador del Quest normalmente vuelve a entrar a VR s
 
 ## Cambiar los datos de un juego
 
-Edita `../router.json`, `../computadora.json`, `../palabras.json`, `../robot_programas.json` o `../noc7.json` y ejecuta su generador (`generar_router.py`, `generar_arma.py`, `generar_material.py`, `generar_robot.py` o `generar_noc7.py`), por ejemplo:
+Edita `../router.json`, `../computadora.json`, `../palabras.json`, `../robot_programas.json`, `../noc7.json` o `../programa_robot.json` y ejecuta su generador (`generar_router.py`, `generar_arma.py`, `generar_material.py`, `generar_robot.py`, `generar_noc7.py` o `generar_programa.py`), por ejemplo:
 
 ```bash
 python ../prototipo_papel/generar_router.py
