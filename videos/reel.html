@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enlace VR · Reel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <!-- A-Frame solo para reutilizar comun.js (música y dibujos); esta página no tiene escena 3D -->
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/marcador.js"></script>
+  <script src="../js/comun.js"></script>
+  <script src="../js/router_datos.js"></script>
+  <style>
+    html, body { margin: 0; background: #06080D; color: #F2F4F8; font-family: "Space Grotesk", sans-serif; }
+    /* el juego corre en un iframe del tamaño del recuadro de video; el lienzo del reel es lo que se graba */
+    #juego { position: absolute; left: 0; top: 0; width: 720px; height: 800px; border: 0; opacity: 0.01; pointer-events: none; }
+    #reel { position: absolute; left: 0; top: 0; width: 720px; height: 1280px; }
+    #estado { position: fixed; right: 8px; bottom: 8px; font: 12px monospace; color: #8B95A7; }
+  </style>
+</head>
+<body>
+  <iframe id="juego" title="juego"></iframe>
+  <canvas id="reel" width="720" height="1280"></canvas>
+  <div id="estado">cargando…</div>
+  <script src="reel.js"></script>
+</body>
+</html>

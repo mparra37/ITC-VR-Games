@@ -89,3 +89,5 @@ python ../prototipo_papel/publicar_material.py
 - `empezar.html`: cómo empezar en una página (guion de un minuto, 3 pasos por juego, hoja de puntajes).
 - `marcador.html`: verificar códigos y marcador por equipo (en vivo si hay hoja de Google).
 - `js/router_cuartos.js`: los cuartos 3D detrás de cada puerta del Router humano.
+
+- `videos/reel_*.mp4`: videos verticales de 15 s por juego. Se regeneran con `node videos/grabar_reels.mjs` (Chrome sin ventana graba `videos/reel.html?juego=...`, que juega el juego real con un guion).
