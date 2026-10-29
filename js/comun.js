@@ -1,12 +1,13 @@
-/* VR ITC Games · piezas comunes de todos los minijuegos
+/* Enlace VR · piezas comunes de todos los minijuegos
  *
- * Estilo visual del evento CODEXIA: fondo casi negro, rojo #ff1638, plata,
- * esquinas cortadas y letras Orbitron (títulos) y Rajdhani (texto).
+ * Identidad Enlace VR ("Uno ve. El equipo sabe."): negro, azul marino, gris y blanco,
+ * con un solo acento azul hielo (#5AA9FF). Verde y rojo solo para correcto o incorrecto.
+ * Letras: Space Grotesk (títulos y texto) e IBM Plex Mono (números, bits y direcciones).
  *
  * - lienzo: panel donde se dibuja texto (canvas), para que los acentos se vean bien en el visor
  * - boton: botón que se apunta con el láser del control o con el mouse
  * - cuadricula: piso de cuadrícula sencillo
- * - ambiente-futurista: cielo oscuro, ciudad con luces rojas, anillos y partículas de datos
+ * - ambiente-futurista: cielo oscuro, ciudad con luces azules, anillos y partículas de datos
  * - ambiente-circuito: dentro de la computadora (circuitos, chips, pulsos de datos)
  * - sonido: pitidos generados por el navegador (sin archivos)
  */
@@ -14,44 +15,43 @@
 
 const PIXELES_POR_METRO = 1000;
 
-// paleta de CODEXIA
+// paleta de Enlace VR
 const COLOR = {
-  panel: '#0d0d10',
-  borde: '#ad001d',
-  texto: '#e6e8eb',
-  tenue: '#8f9299',
-  acento: '#ff1638',
-  magenta: '#ff1638',
-  bien: '#2fd27a',
-  mal: '#ff2d4d',
-  tecla: '#16161b',
-  teclaEncima: '#2a0d14',
-  principal: '#c8102e',
-  principalEncima: '#ff1638',
+  fondo: '#06080D',
+  marino: '#0B1F3A',
+  panel: '#0C1628',
+  borde: '#2F6FBF',
+  texto: '#F2F4F8',
+  tenue: '#8B95A7',
+  acento: '#5AA9FF',
+  magenta: '#5AA9FF', // nombre viejo, se deja para no romper código
+  bien: '#3DDC97',
+  mal: '#FF5C6C',
+  tecla: '#13233D',
+  teclaEncima: '#1C3A66',
+  principal: '#2F6FBF',
+  principalEncima: '#4A8FE0',
 };
 
-const LETRA = 'Rajdhani, "Segoe UI", Roboto, system-ui, sans-serif';
-const TITULO = 'Orbitron, Rajdhani, "Segoe UI", sans-serif';
-const MONO = 'Consolas, "Roboto Mono", "Courier New", monospace';
+const LETRA = '"Space Grotesk", "Segoe UI", Roboto, system-ui, sans-serif';
+const TITULO = LETRA;
+const MONO = '"IBM Plex Mono", Consolas, "Courier New", monospace';
 
 // ---------- utilidades de dibujo ----------
 
-/** Rectángulo con las esquinas superior derecha e inferior izquierda cortadas (estilo CODEXIA).
- *  Se llama "redondo" por compatibilidad con el código de los juegos. */
+/** Rectángulo con esquinas redondeadas. */
 function rectRedondo(ctx, x, y, w, h, r) {
-  const c = Math.min(r * 1.1, w / 4, h / 3);
+  const c = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + w - c, y);
-  ctx.lineTo(x + w, y + c);
-  ctx.lineTo(x + w, y + h);
-  ctx.lineTo(x + c, y + h);
-  ctx.lineTo(x, y + h - c);
+  ctx.moveTo(x + c, y);
+  ctx.arcTo(x + w, y, x + w, y + h, c);
+  ctx.arcTo(x + w, y + h, x, y + h, c);
+  ctx.arcTo(x, y + h, x, y, c);
+  ctx.arcTo(x, y, x + w, y, c);
   ctx.closePath();
 }
 
-/** Escribe texto. Las letras gruesas (peso 700 o más) usan Orbitron, como los títulos del evento.
- *  Si el texto no cabe en el lienzo, se achica solo. */
+/** Escribe texto. Si no cabe en el lienzo, se achica solo. */
 function texto(ctx, str, x, y, { tam = 40, color = COLOR.texto, peso = 400, alinear = 'left', fuente } = {}) {
   const familia = fuente || (peso >= 700 ? TITULO : LETRA);
   const ancho = ctx.canvas.width;
@@ -69,28 +69,68 @@ function texto(ctx, str, x, y, { tam = 40, color = COLOR.texto, peso = 400, alin
   ctx.fillText(str, x, y);
 }
 
-/** Fondo de panel: oscuro, borde fino y una marca roja en la esquina cortada. */
+/** Fondo de panel: azul marino oscuro, esquinas redondeadas y borde fino. */
 function fondoPanel(ctx, w, h, color = COLOR.panel) {
-  rectRedondo(ctx, 4, 4, w - 8, h - 8, 24);
+  rectRedondo(ctx, 4, 4, w - 8, h - 8, 26);
   ctx.fillStyle = color;
   ctx.fill();
   ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
-  ctx.stroke();
-  const c = Math.min(24 * 1.1, (w - 8) / 4, (h - 8) / 3);
-  ctx.beginPath();
-  ctx.moveTo(w - 4 - c, 4);
-  ctx.lineTo(w - 4, 4 + c);
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = COLOR.acento;
+  ctx.strokeStyle = 'rgba(242, 244, 248, 0.16)';
   ctx.stroke();
 }
 
-/** Cuando terminan de cargar las letras del evento, redibuja todos los paneles y botones. */
+/** Logo de Enlace VR: dos nodos unidos por una línea punteada. (x, y) = centro del logo; t = tamaño. */
+function dibujarLogo(ctx, x, y, t) {
+  ctx.save();
+  ctx.lineWidth = t * 0.09;
+  ctx.strokeStyle = COLOR.texto;
+  ctx.beginPath();
+  ctx.arc(x - t * 0.62, y, t * 0.22, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = COLOR.acento;
+  ctx.beginPath();
+  ctx.arc(x + t * 0.62, y, t * 0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = COLOR.tenue;
+  ctx.setLineDash([t * 0.12, t * 0.1]);
+  ctx.beginPath();
+  ctx.moveTo(x - t * 0.36, y);
+  ctx.lineTo(x + t * 0.36, y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Convierte un dibujo SVG (texto) en imagen para pintarlo en un lienzo.
+ *  Devuelve la imagen si ya está lista (o null) y llama a alCargar(img) cuando carga. */
+const IMAGENES_SVG = new Map();
+function imagenSVG(svg, alCargar) {
+  let reg = IMAGENES_SVG.get(svg);
+  if (!reg) {
+    const img = new Image();
+    reg = { img, listo: false, esperan: [] };
+    img.onload = () => {
+      reg.listo = true;
+      reg.esperan.forEach((f) => f(img));
+      reg.esperan = [];
+    };
+    // tamaño explícito: algunos navegadores no dibujan bien un SVG sin ancho y alto
+    const conTamano = svg.includes(' width=') ? svg : svg.replace('<svg ', '<svg width="512" height="512" ');
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(conTamano)}`;
+    IMAGENES_SVG.set(svg, reg);
+  }
+  if (reg.listo) {
+    if (alCargar) alCargar(reg.img);
+    return reg.img;
+  }
+  if (alCargar) reg.esperan.push(alCargar);
+  return null;
+}
+
+/** Cuando terminan de cargar las letras, redibuja todos los paneles y botones. */
 if (document.fonts && document.fonts.load) {
   Promise.all([
-    document.fonts.load('700 40px Orbitron'), document.fonts.load('800 40px Orbitron'),
-    document.fonts.load('400 40px Rajdhani'), document.fonts.load('600 40px Rajdhani'),
+    document.fonts.load('500 40px "Space Grotesk"'), document.fonts.load('700 40px "Space Grotesk"'),
+    document.fonts.load('500 40px "IBM Plex Mono"'),
   ]).then(() => {
     document.querySelectorAll('[lienzo]').forEach((el) => {
       const l = el.components && el.components.lienzo;
@@ -111,8 +151,10 @@ function minutos(segundos) {
 /** Crea un plano con un canvas como textura. */
 function planoConLienzo(el, ancho, alto) {
   const canvas = document.createElement('canvas');
-  canvas.width = Math.min(2048, Math.round(ancho * PIXELES_POR_METRO));
-  canvas.height = Math.min(2048, Math.round(alto * PIXELES_POR_METRO));
+  // máximo 2048 px por lado, sin deformar: si el panel es muy grande, se reduce igual en los dos ejes
+  const escala = Math.min(1, 2048 / (Math.max(ancho, alto) * PIXELES_POR_METRO));
+  canvas.width = Math.round(ancho * PIXELES_POR_METRO * escala);
+  canvas.height = Math.round(alto * PIXELES_POR_METRO * escala);
   const textura = new THREE.CanvasTexture(canvas);
   textura.colorSpace = THREE.SRGBColorSpace;
   textura.anisotropy = 4;
@@ -200,7 +242,7 @@ AFRAME.registerComponent('boton', {
     const colores = {
       tecla: [COLOR.tecla, COLOR.teclaEncima],
       principal: [COLOR.principal, COLOR.principalEncima],
-      casilla: ['rgba(36, 36, 42, 0.62)', 'rgba(173, 0, 29, 0.8)'],
+      casilla: ['rgba(19, 35, 61, 0.7)', 'rgba(47, 111, 191, 0.85)'],
     }[d.estilo] || [COLOR.tecla, COLOR.teclaEncima];
     let relleno = encima ? colores[1] : colores[0];
     if (d.elegido) relleno = COLOR.acento;
@@ -219,7 +261,7 @@ AFRAME.registerComponent('boton', {
       ctx.font = `600 ${tam}px ${LETRA}`;
     }
     let colorTexto = COLOR.texto;
-    if (d.elegido) colorTexto = '#050506';
+    if (d.elegido) colorTexto = '#06080D';
     else if (d.estilo === 'casilla') colorTexto = 'rgba(230,232,235,.5)';
     texto(ctx, d.texto, w / 2, h / 2 + tam * 0.04, { tam, peso: 600, alinear: 'center', color: colorTexto });
     ctx.globalAlpha = 1;
@@ -230,7 +272,7 @@ AFRAME.registerComponent('boton', {
 /** Piso de cuadrícula estilo neón (sencillo). */
 AFRAME.registerComponent('cuadricula', {
   init() {
-    this.el.setObject3D('rejilla', new THREE.GridHelper(40, 40, 0xff1638, 0x2a1016));
+    this.el.setObject3D('rejilla', new THREE.GridHelper(40, 40, 0x5aa9ff, 0x14284a));
   },
 });
 
@@ -240,7 +282,7 @@ AFRAME.registerComponent('ambiente-futurista', {
   init() {
     const azar = azarConSemilla(2026);
     const grupo = new THREE.Group();
-    this.el.sceneEl.setAttribute('fog', 'type: exponential; color: #0a0507; density: 0.03');
+    this.el.sceneEl.setAttribute('fog', 'type: exponential; color: #05080F; density: 0.03');
 
     // cielo: degradado morado-azul, brillo en el horizonte y estrellas
     const cielo = document.createElement('canvas');
@@ -249,16 +291,16 @@ AFRAME.registerComponent('ambiente-futurista', {
     const c = cielo.getContext('2d');
     const degradado = c.createLinearGradient(0, 0, 0, 1024);
     degradado.addColorStop(0, '#030304');
-    degradado.addColorStop(0.38, '#0b0709');
-    degradado.addColorStop(0.49, '#4a0a14');
-    degradado.addColorStop(0.52, '#1a0b0e');
+    degradado.addColorStop(0.38, '#070b14');
+    degradado.addColorStop(0.49, '#14315c');
+    degradado.addColorStop(0.52, '#0b1730');
     degradado.addColorStop(1, '#030304');
     c.fillStyle = degradado;
     c.fillRect(0, 0, 2048, 1024);
     for (let i = 0; i < 900; i++) {
       const y = azar() * 470;
       c.globalAlpha = 0.25 + azar() * 0.75;
-      c.fillStyle = azar() < 0.15 ? '#ff8090' : '#ffffff';
+      c.fillStyle = azar() < 0.15 ? '#9cc7ff' : '#ffffff';
       c.fillRect(azar() * 2048, y, azar() < 0.1 ? 3 : 2, azar() < 0.1 ? 3 : 2);
     }
     c.globalAlpha = 1;
@@ -271,17 +313,17 @@ AFRAME.registerComponent('ambiente-futurista', {
     grupo.add(esfera);
 
     // piso oscuro con cuadrícula neón y un anillo de luz alrededor del jugador
-    const piso = new THREE.Mesh(new THREE.CircleGeometry(80, 64), new THREE.MeshBasicMaterial({ color: 0x050506 }));
+    const piso = new THREE.Mesh(new THREE.CircleGeometry(80, 64), new THREE.MeshBasicMaterial({ color: 0x06080d }));
     piso.rotation.x = -Math.PI / 2;
     grupo.add(piso);
-    const rejilla = new THREE.GridHelper(120, 120, 0xff1638, 0x2a1016);
+    const rejilla = new THREE.GridHelper(120, 120, 0x5aa9ff, 0x14284a);
     rejilla.position.y = 0.002;
     rejilla.material.transparent = true;
     rejilla.material.opacity = 0.55;
     grupo.add(rejilla);
     const aro = new THREE.Mesh(
       new THREE.RingGeometry(1.9, 1.95, 64),
-      new THREE.MeshBasicMaterial({ color: 0xff1638, transparent: true, opacity: 0.7, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: 0x5aa9ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide }),
     );
     aro.rotation.x = -Math.PI / 2;
     aro.position.y = 0.01;
@@ -294,7 +336,7 @@ AFRAME.registerComponent('ambiente-futurista', {
     const v = ventanas.getContext('2d');
     v.fillStyle = '#0a0d1f';
     v.fillRect(0, 0, 64, 128);
-    const tonos = ['#ff1638', '#e6e8eb', '#ad001d', '#8f9299'];
+    const tonos = ['#5AA9FF', '#e6e8eb', '#2F6FBF', '#8B95A7'];
     for (let y = 4; y < 128; y += 10) {
       for (let x = 4; x < 64; x += 10) {
         if (azar() < 0.35) {
@@ -326,7 +368,7 @@ AFRAME.registerComponent('ambiente-futurista', {
       if (azar() < 0.4) {
         const techo = new THREE.Mesh(
           new THREE.BoxGeometry(ancho * 1.02, 0.15, ancho * 1.02),
-          new THREE.MeshBasicMaterial({ color: azar() < 0.5 ? 0xff1638 : 0xe6e8eb }),
+          new THREE.MeshBasicMaterial({ color: azar() < 0.5 ? 0x5aa9ff : 0xe6e8eb }),
         );
         techo.position.set(edificio.position.x, alto, edificio.position.z);
         techo.rotation.y = edificio.rotation.y;
@@ -336,7 +378,7 @@ AFRAME.registerComponent('ambiente-futurista', {
 
     // anillos holográficos flotando al fondo
     this.anillos = [];
-    [[3.2, 0xff1638], [4.4, 0xe6e8eb], [5.6, 0xad001d]].forEach(([radio, color], i) => {
+    [[3.2, 0x5aa9ff], [4.4, 0xe6e8eb], [5.6, 0x2f6fbf]].forEach(([radio, color], i) => {
       const anillo = new THREE.Mesh(
         new THREE.TorusGeometry(radio, 0.025, 8, 96),
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 }),
@@ -359,7 +401,7 @@ AFRAME.registerComponent('ambiente-futurista', {
     }
     const geometria = new THREE.BufferGeometry();
     geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
-    this.particulas = new THREE.Points(geometria, new THREE.PointsMaterial({ color: 0xff1638, size: 0.07, transparent: true, opacity: 0.8 }));
+    this.particulas = new THREE.Points(geometria, new THREE.PointsMaterial({ color: 0x5aa9ff, size: 0.07, transparent: true, opacity: 0.8 }));
     grupo.add(this.particulas);
 
     this.el.setObject3D('ambiente', grupo);
@@ -384,20 +426,20 @@ AFRAME.registerComponent('ambiente-circuito', {
   init() {
     const azar = azarConSemilla(1971);
     const grupo = new THREE.Group();
-    this.el.sceneEl.setAttribute('fog', 'type: exponential; color: #050506; density: 0.045');
+    this.el.sceneEl.setAttribute('fog', 'type: exponential; color: #06080D; density: 0.045');
 
     // piso: tarjeta de circuitos dibujada en un lienzo y repetida
     const lienzo = document.createElement('canvas');
     lienzo.width = 1024;
     lienzo.height = 1024;
     const c = lienzo.getContext('2d');
-    c.fillStyle = '#08080a';
+    c.fillStyle = '#070b13';
     c.fillRect(0, 0, 1024, 1024);
     const paso = 32;
     for (let i = 0; i < 70; i++) {
       let x = Math.floor(azar() * 32) * paso;
       let y = Math.floor(azar() * 32) * paso;
-      c.strokeStyle = azar() < 0.8 ? 'rgba(255, 22, 56, 0.55)' : 'rgba(230, 232, 235, 0.35)';
+      c.strokeStyle = azar() < 0.8 ? 'rgba(90, 169, 255, 0.55)' : 'rgba(230, 232, 235, 0.35)';
       c.lineWidth = azar() < 0.3 ? 5 : 3;
       c.beginPath();
       c.moveTo(x, y);
@@ -412,7 +454,7 @@ AFRAME.registerComponent('ambiente-circuito', {
       c.fill();
     }
     for (let i = 0; i < 6; i++) {
-      c.strokeStyle = 'rgba(255, 22, 56, 0.3)';
+      c.strokeStyle = 'rgba(90, 169, 255, 0.3)';
       c.lineWidth = 2;
       c.strokeRect(Math.floor(azar() * 28) * paso, Math.floor(azar() * 28) * paso, 4 * paso, 3 * paso);
     }
@@ -425,15 +467,15 @@ AFRAME.registerComponent('ambiente-circuito', {
     const piso = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshBasicMaterial({ map: texPiso }));
     piso.rotation.x = -Math.PI / 2;
     grupo.add(piso);
-    const aro = new THREE.Mesh(new THREE.RingGeometry(1.9, 1.95, 64), new THREE.MeshBasicMaterial({ color: 0xff1638, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+    const aro = new THREE.Mesh(new THREE.RingGeometry(1.9, 1.95, 64), new THREE.MeshBasicMaterial({ color: 0x5aa9ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
     aro.rotation.x = -Math.PI / 2;
     aro.position.y = 0.01;
     grupo.add(aro);
 
     // chips, capacitores y disipadores gigantes alrededor
-    const chipMat = new THREE.MeshStandardMaterial({ color: 0x0d0d10, metalness: 0.6, roughness: 0.4 });
+    const chipMat = new THREE.MeshStandardMaterial({ color: 0x0c1628, metalness: 0.6, roughness: 0.4 });
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x8a96b0, metalness: 0.9, roughness: 0.3 });
-    const lineaCian = new THREE.LineBasicMaterial({ color: 0xff1638 });
+    const lineaCian = new THREE.LineBasicMaterial({ color: 0x5aa9ff });
     for (let i = 0; i < 34; i++) {
       const angulo = azar() * Math.PI * 2;
       const radio = 5 + azar() * 16;
@@ -456,7 +498,7 @@ AFRAME.registerComponent('ambiente-circuito', {
         const h = 0.8 + azar() * 1.6;
         const capacitor = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 24), new THREE.MeshStandardMaterial({ color: 0x1c1c22, metalness: 0.5, roughness: 0.4 }));
         capacitor.position.set(x, h / 2, z);
-        const tapa = new THREE.Mesh(new THREE.TorusGeometry(r * 0.8, 0.03, 8, 24), new THREE.MeshBasicMaterial({ color: azar() < 0.5 ? 0xff1638 : 0xe6e8eb }));
+        const tapa = new THREE.Mesh(new THREE.TorusGeometry(r * 0.8, 0.03, 8, 24), new THREE.MeshBasicMaterial({ color: azar() < 0.5 ? 0x5aa9ff : 0xe6e8eb }));
         tapa.rotation.x = Math.PI / 2;
         tapa.position.set(x, h + 0.01, z);
         grupo.add(capacitor, tapa);
@@ -477,7 +519,7 @@ AFRAME.registerComponent('ambiente-circuito', {
 
     // buses de datos en el "techo"
     for (let i = 0; i < 10; i++) {
-      const bus = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 70), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff1638 : 0xe6e8eb, transparent: true, opacity: 0.55 }));
+      const bus = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 70), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x5aa9ff : 0xe6e8eb, transparent: true, opacity: 0.55 }));
       bus.position.set(-9 + i * 2, 7 + (i % 3) * 0.6, 0);
       bus.rotation.y = 0.2;
       grupo.add(bus);
@@ -495,7 +537,7 @@ AFRAME.registerComponent('ambiente-circuito', {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    this.pulsos = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff5a70, size: 0.14, transparent: true, opacity: 0.95 }));
+    this.pulsos = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x8fc3ff, size: 0.14, transparent: true, opacity: 0.95 }));
     grupo.add(this.pulsos);
 
     // datos que suben a lo lejos
@@ -540,8 +582,8 @@ AFRAME.registerComponent('ambiente-circuito', {
  *  Devuelve la entidad raíz; los juegos ponen sus pantallas dentro. */
 function crearConsola(padre, ancho = 1.6, alto = 0.95) {
   const raiz = crearEntidad(padre, { position: '0 0.82 -0.85', rotation: '-38 0 0' });
-  crearEntidad(raiz, { geometry: `primitive: plane; width: ${ancho + 0.04}; height: ${alto + 0.04}`, material: 'shader: flat; color: #ff1638; opacity: 0.55; transparent: true', position: '0 0 -0.012' });
-  crearEntidad(raiz, { geometry: `primitive: plane; width: ${ancho}; height: ${alto}`, material: 'shader: flat; color: #050506; opacity: 0.95; transparent: true', position: '0 0 -0.008' });
+  crearEntidad(raiz, { geometry: `primitive: plane; width: ${ancho + 0.04}; height: ${alto + 0.04}`, material: 'shader: flat; color: #5AA9FF; opacity: 0.35; transparent: true', position: '0 0 -0.012' });
+  crearEntidad(raiz, { geometry: `primitive: plane; width: ${ancho}; height: ${alto}`, material: 'shader: flat; color: #06080D; opacity: 0.95; transparent: true', position: '0 0 -0.008' });
   return raiz;
 }
 

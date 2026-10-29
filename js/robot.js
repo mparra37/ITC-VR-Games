@@ -1,4 +1,4 @@
-/* VR ITC Games · Robot programado
+/* Enlace VR · Robot programado
  *
  * El Operador ve un tablero de 4 x 4 con un robot, el número de programa,
  * la casilla de inicio y hacia dónde mira el robot. Los decodificadores tienen
@@ -93,7 +93,7 @@ function crearRobot() {
   const robot = new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({ color: 0xdfe7ff, metalness: 0.4, roughness: 0.35 });
   const oscuro = new THREE.MeshStandardMaterial({ color: 0x1b2a55, metalness: 0.5, roughness: 0.5 });
-  const brilloCian = new THREE.MeshBasicMaterial({ color: 0xff1638 });
+  const brilloCian = new THREE.MeshBasicMaterial({ color: 0x5aa9ff });
   const brilloMagenta = new THREE.MeshBasicMaterial({ color: 0xe6e8eb });
 
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.016, 28), oscuro);
@@ -160,8 +160,8 @@ AFRAME.registerComponent('robot-programado', {
 
     // ---- panel de información (arriba, al fondo) ----
     const panel = crearEntidad(this.el, { position: '0 1.84 -2.2' });
-    crearEntidad(panel, { geometry: 'primitive: plane; width: 2.26; height: 1.4', material: 'shader: flat; color: #ff1638; opacity: 0.5; transparent: true', position: '0 0 -0.035' });
-    crearEntidad(panel, { geometry: 'primitive: plane; width: 2.22; height: 1.36', material: 'shader: flat; color: #050506; opacity: 0.92; transparent: true', position: '0 0 -0.03' });
+    crearEntidad(panel, { geometry: 'primitive: plane; width: 2.26; height: 1.4', material: 'shader: flat; color: #5AA9FF; opacity: 0.5; transparent: true', position: '0 0 -0.035' });
+    crearEntidad(panel, { geometry: 'primitive: plane; width: 2.22; height: 1.36', material: 'shader: flat; color: #06080D; opacity: 0.92; transparent: true', position: '0 0 -0.03' });
     ['inicio', 'juego', 'fin'].forEach((nombre) => {
       this.pantallas[nombre] = crearEntidad(panel, { visible: false });
     });
@@ -193,7 +193,7 @@ AFRAME.registerComponent('robot-programado', {
     this.mesa = crearEntidad(this.el, { position: '0 0.78 -1.0', rotation: '28 0 0' });
     const caja = new THREE.BoxGeometry(0.95, 0.03, 1.1);
     const base = new THREE.Mesh(caja, new THREE.MeshStandardMaterial({ color: 0x0b1330, metalness: 0.5, roughness: 0.45 }));
-    const orilla = new THREE.LineSegments(new THREE.EdgesGeometry(caja), new THREE.LineBasicMaterial({ color: 0xff1638 }));
+    const orilla = new THREE.LineSegments(new THREE.EdgesGeometry(caja), new THREE.LineBasicMaterial({ color: 0x5aa9ff }));
     const grupoBase = new THREE.Group();
     grupoBase.add(base, orilla);
     grupoBase.position.set(0, -0.016, 0.05);
@@ -235,7 +235,7 @@ AFRAME.registerComponent('robot-programado', {
     for (let i = 0; i < 24; i++) {
       const punto = new THREE.Mesh(
         new THREE.RingGeometry(0.022, 0.034, 24),
-        new THREE.MeshBasicMaterial({ color: 0xff1638, transparent: true, opacity: 0.85, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({ color: 0x5aa9ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide }),
       );
       punto.rotation.x = -Math.PI / 2;
       punto.visible = false;
@@ -463,13 +463,13 @@ AFRAME.registerComponent('robot-programado', {
 
   dibujarInicio() {
     pintar(this.lienzoTitulo, (ctx, w, h) => {
-      texto(ctx, 'VR ITC GAMES', w / 2, h * 0.13, { tam: 54, color: COLOR.acento, peso: 700, alinear: 'center' });
+      texto(ctx, 'ENLACE VR', w / 2, h * 0.13, { tam: 54, color: COLOR.acento, peso: 700, alinear: 'center' });
       texto(ctx, 'Robot programado', w / 2, h * 0.38, { tam: 120, peso: 700, alinear: 'center' });
       texto(ctx, 'Sigan el programa del manual y digan dónde termina el robot.', w / 2, h * 0.64, { tam: 52, color: COLOR.tenue, alinear: 'center' });
       texto(ctx, 'Cuando estén listos, presionen Empezar', w / 2, h * 0.88, { tam: 52, peso: 600, color: COLOR.acento, alinear: 'center' });
     });
     pintar(this.lienzoSeguridad, (ctx, w, h) => {
-      fondoPanel(ctx, w, h, '#121216');
+      fondoPanel(ctx, w, h, '#102039');
       texto(ctx, 'Juega sentado · Correa del control en la muñeca', w / 2, h * 0.36, { tam: 46, alinear: 'center' });
       texto(ctx, 'Al terminar, quítate el visor con las dos manos y pásalo con cuidado', w / 2, h * 0.7, { tam: 40, color: COLOR.tenue, alinear: 'center' });
     });
@@ -520,7 +520,7 @@ AFRAME.registerComponent('robot-programado', {
         ctx.fillStyle = 'rgba(40, 6, 14, 0.85)';
         rectRedondo(ctx, 4, 4, w - 8, h - 8, 24);
         ctx.fill();
-        texto(ctx, '¡CONTRAATAQUE DE ULTRÓN!', w / 2, h * 0.38, { tam: 96, peso: 800, color: COLOR.mal, alinear: 'center' });
+        texto(ctx, '¡ENLACE CAÍDO!', w / 2, h * 0.38, { tam: 96, peso: 800, color: COLOR.mal, alinear: 'center' });
         texto(ctx, `Esperen ${Math.ceil(restante)} s · nadie habla`, w / 2, h * 0.64, { tam: 62, alinear: 'center' });
       }
     });
@@ -537,13 +537,13 @@ AFRAME.registerComponent('robot-programado', {
     const practica = this.modo === 'practica';
     pintar(this.lienzoResultado, (ctx, w, h) => {
       fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : 'TIEMPO // RETO COMPLETADO', w / 2, h * 0.11, { tam: 64, peso: 800, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Ultrón pierde esta energía! Anótenla en el marcador', w / 2, h * 0.26, { tam: 56, peso: 700, color: COLOR.bien, alinear: 'center' });
+      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.11, { tam: 64, peso: 800, color: COLOR.acento, alinear: 'center' });
+      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.26, { tam: 56, peso: 700, color: COLOR.bien, alinear: 'center' });
       texto(ctx, `${this.puntaje}`, w / 2, h * 0.46, { tam: 190, peso: 800, alinear: 'center' });
       texto(ctx, this.puntaje === 1 ? 'programa resuelto' : 'programas resueltos', w / 2, h * 0.61, { tam: 50, color: COLOR.tenue, alinear: 'center' });
       texto(ctx, `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`, w / 2, h * 0.71, { tam: 42, color: COLOR.tenue, alinear: 'center' });
       rectRedondo(ctx, 60, h * 0.79, w - 120, h * 0.16, 18);
-      ctx.fillStyle = '#16161b';
+      ctx.fillStyle = '#13233D';
       ctx.fill();
       texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.87, { tam: 44, peso: 600, alinear: 'center' });
     });

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enlace VR · Laboratorio NOC-7</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/noc7_datos.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/noc7.js"></script>
+  <style>
+    .ayuda-2d {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10; max-width: calc(100% - 24px);
+      font: 14px/1.4 "Space Grotesk", "Segoe UI", system-ui, sans-serif; color: #F2F4F8;
+      background: rgba(6, 8, 13, .9); border: 1px solid rgba(90, 169, 255, .45); padding: 8px 12px; border-radius: 10px;
+    }
+    .ayuda-2d a { color: #5AA9FF; }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #06080D" fog="type: linear; color: #06080D; near: 6; far: 18" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <!-- el jugador no camina: solo gira la cabeza (el paso entre salas es un fundido a negro) -->
+    <a-entity id="jugador">
+      <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 14; lineColor: #5AA9FF"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 14; lineColor: #5AA9FF"></a-entity>
+    </a-entity>
+
+    <!-- el laboratorio: panel del reto enfrente, puerta y palanca a la derecha -->
+    <a-entity id="juego" noc7></a-entity>
+  </a-scene>
+
+  <div class="ayuda-2d">Modo 2D: arrastra para mirar (la palanca está a la derecha) y haz clic en los botones. Teclado: números, Retroceso y Enter; 1 a 8 = focos; V/F = verdadero o falso; R = reiniciar para el siguiente equipo. En el visor, toca "VR". · <a href="index.html">Menú</a></div>
+</body>
+</html>

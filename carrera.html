@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VR ITC Games · Carrera de palabras</title>
+  <title>Enlace VR · Carrera de palabras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <script src="js/palabras.js"></script>
   <script src="js/comun.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/carrera.js"></script>
   <style>
-    .ayuda-2d a { color: #ff1638; }
+    .ayuda-2d a { color: #5AA9FF; }
     .ayuda-2d {
       position: fixed; left: 12px; bottom: 12px; z-index: 10;
-      font: 14px/1.4 Rajdhani, "Segoe UI", system-ui, sans-serif; color: #e6e8eb;
-      background: rgba(5, 5, 6, .88); border: 1px solid rgba(255, 22, 56, .5); padding: 8px 12px; border-radius: 8px;
+      font: 14px/1.4 "Space Grotesk", "Segoe UI", system-ui, sans-serif; color: #e6e8eb;
+      background: rgba(6, 8, 13, .9); border: 1px solid rgba(90, 169, 255, .45); padding: 8px 12px; border-radius: 10px;
     }
   </style>
 </head>
@@ -28,8 +28,8 @@
     <!-- jugador sentado: cámara y los dos controles con apuntador láser -->
     <a-entity id="jugador">
       <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
-      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #ff1638"></a-entity>
-      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #ff1638"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #5AA9FF"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #5AA9FF"></a-entity>
     </a-entity>
 
     <!-- el panel del juego, frente al jugador -->

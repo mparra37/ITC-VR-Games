@@ -1,23 +1,25 @@
-/* VR ITC Games · Router humano: tormenta de paquetes
+/* Enlace VR · Router humano
  *
- * El Operador está en el centro de un switch gigante, dentro de la computadora.
- * Llega un paquete con su dirección IP; los decodificadores buscan en la tabla de rutas
- * del Manual de campo a dónde va. El Operador voltea a buscar el portal correcto
- * (los portales están a su alrededor y cambian de lugar) y le dispara el paquete.
+ * El Operador es el router de la escuela. Llega un paquete con una dirección IP. Como en un sobre,
+ * los 3 primeros números son la RED (la calle) y el último es el EQUIPO (el número de casa):
+ * el visor pinta la red en azul y el equipo en gris. El Operador le dicta la red al equipo, el equipo
+ * la busca en la tabla de rutas del Manual de campo y le dice la puerta. El Operador voltea, encuentra
+ * la puerta (cada una tiene su dibujo) y le dispara el paquete. Siempre se muestra por qué.
  *
- * Nivel 1: SALÓN, BIBLIOTECA, INTERNET.  Nivel 2: + SERVIDORES y trampas.
- * Nivel 3: + SATÉLITE y DESCARTAR (IP rota), y los portales se mueven tras cada paquete.
+ * Nivel 1: SALÓN, BIBLIOTECA, INTERNET.  Nivel 2: + SERVIDORES y redes parecidas.
+ * Nivel 3: + LABORATORIO y BASURA (direcciones imposibles), y las puertas se mueven tras cada paquete.
  * Ronda de 3 minutos, +1 por acierto, bloqueo de 5 segundos al fallar o saltar.
  */
-/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola */
+/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola, imagenSVG, irA */
 
 const CONFIG = {
   segundosRonda: 180,
   segundosBloqueo: 5,
   aciertosPorNivel: 5,
   nivelMaximo: 3,
-  radioPortales: 2.3,
+  radioPuertas: 2.3,
   msLanzamiento: 450,
+  segundosExplicacion: 3.5,
 };
 
 // lugares alrededor del jugador: ángulo (grados, + = derecha) y altura
@@ -32,32 +34,40 @@ function destinosDelNivel(nivel) {
   return window.ROUTER.destinos.filter((d) => d.nivel <= nivel);
 }
 
-/** A dónde va una IP según la tabla de rutas del nivel. */
+/** A qué puerta va una IP según la tabla de rutas del nivel. */
 function enrutar(ip, nivel) {
   const numeros = ip.split('.').map(Number);
-  if (nivel >= 3 && numeros.some((n) => n > 255)) return 'DESCARTAR';
-  const prefijo = numeros.slice(0, 3).join('.');
-  const destino = destinosDelNivel(nivel).find((d) => d.prefijo === prefijo);
+  if (nivel >= 3 && numeros.some((n) => n > 255)) return 'BASURA';
+  const red = numeros.slice(0, 3).join('.');
+  const destino = destinosDelNivel(nivel).find((d) => d.red === red);
   return destino ? destino.nombre : 'INTERNET';
+}
+
+/** Por qué el paquete va a esa puerta (la misma frase que trae el manual). */
+function explicar(ip, nivel) {
+  const numeros = ip.split('.').map(Number);
+  const red = numeros.slice(0, 3).join('.');
+  if (nivel >= 3 && numeros.some((n) => n > 255)) return `${numeros.find((n) => n > 255)} es mayor que 255: esa dirección no existe.`;
+  return enrutar(ip, nivel) === 'INTERNET' ? `La red ${red} no está en la tabla.` : `La red ${red} está en la tabla.`;
 }
 
 const entre = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const azarDe = (lista) => lista[Math.floor(Math.random() * lista.length)];
 
-/** Un paquete al azar: primero se elige el destino y luego una IP que vaya ahí. */
+/** Un paquete al azar: primero se elige la puerta y luego una IP que vaya ahí. */
 function generarPaquete(nivel, anterior) {
   const r = window.ROUTER;
   const opciones = destinosDelNivel(nivel);
   for (let intento = 0; intento < 200; intento++) {
     const destino = azarDe(opciones);
     let ip;
-    if (destino.prefijo) {
-      ip = `${destino.prefijo}.${entre(2, 254)}`;
+    if (destino.red) {
+      ip = `${destino.red}.${entre(2, 254)}`;
     } else if (destino.nombre === 'INTERNET') {
-      ip = nivel >= 2 && Math.random() < 0.55 ? `${azarDe(r.trampas)}.${entre(2, 254)}` : azarDe(r.internet_ejemplos);
+      ip = nivel >= 2 && Math.random() < 0.55 ? `${azarDe(r.parecidos)}.${entre(2, 254)}` : azarDe(r.internet_ejemplos);
     } else {
-      // DESCARTAR: una IP con un número mayor a 255
-      const base = azarDe(opciones.filter((d) => d.prefijo)).prefijo.split('.').map(Number).concat([entre(2, 254)]);
+      // BASURA: una IP con un número mayor a 255
+      const base = azarDe(opciones.filter((d) => d.red)).red.split('.').map(Number).concat([entre(2, 254)]);
       base[entre(1, 3)] = entre(256, 399);
       ip = base.join('.');
     }
@@ -66,44 +76,58 @@ function generarPaquete(nivel, anterior) {
   throw new Error('No se pudo generar un paquete');
 }
 
-// ---------- portales y paquete ----------
-
-function crearPortal(color) {
-  const grupo = new THREE.Group();
-  const c = new THREE.Color(color);
-  const anillo = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.025, 12, 64), new THREE.MeshBasicMaterial({ color: c }));
-  const remolino = document.createElement('canvas');
-  remolino.width = 256;
-  remolino.height = 256;
-  const ctx = remolino.getContext('2d');
-  const g = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
-  g.addColorStop(0, '#ffffff');
-  g.addColorStop(0.25, color);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 256, 256);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 6;
-  for (let i = 0; i < 4; i++) {
+/** Dibuja una IP con la red en azul y el equipo en gris, y (si se pide) las palabras RED y EQUIPO debajo. */
+function dibujarIP(ctx, ip, xCentro, y, tam, conNombres) {
+  const numeros = ip.split('.');
+  const red = numeros.slice(0, 3).join('.');
+  const partes = [[red, COLOR.acento], ['.', COLOR.tenue], [numeros[3], COLOR.tenue]];
+  ctx.font = `600 ${tam}px ${MONO}`;
+  const anchos = partes.map(([t]) => ctx.measureText(t).width);
+  let x = xCentro - anchos.reduce((a, b) => a + b, 0) / 2;
+  const inicios = [];
+  partes.forEach(([t, color], i) => {
+    inicios.push(x);
+    texto(ctx, t, x, y, { tam, peso: 600, color, fuente: MONO });
+    x += anchos[i];
+  });
+  if (conNombres) {
+    const yLinea = y + tam * 0.62;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = COLOR.acento;
     ctx.beginPath();
-    ctx.arc(128, 128, 40 + i * 22, i, i + 2.2);
+    ctx.moveTo(inicios[0], yLinea);
+    ctx.lineTo(inicios[0] + anchos[0], yLinea);
     ctx.stroke();
+    ctx.strokeStyle = COLOR.tenue;
+    ctx.beginPath();
+    ctx.moveTo(inicios[2], yLinea);
+    ctx.lineTo(inicios[2] + anchos[2], yLinea);
+    ctx.stroke();
+    const t = Math.max(24, tam * 0.3);
+    texto(ctx, 'RED (díctala)', inicios[0] + anchos[0] / 2, yLinea + t, { tam: t, peso: 600, color: COLOR.acento, alinear: 'center' });
+    texto(ctx, 'EQUIPO', inicios[2] + anchos[2] / 2, yLinea + t, { tam: t, peso: 600, color: COLOR.tenue, alinear: 'center' });
   }
-  const tex = new THREE.CanvasTexture(remolino);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const disco = new THREE.Mesh(new THREE.CircleGeometry(0.31, 48), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
-  const tubo = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.2, 0.6, 32, 1, true), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }));
+}
+
+// ---------- puertas y paquete ----------
+
+function crearPuerta(color) {
+  const grupo = new THREE.Group();
+  const anillo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.022, 12, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(color) }));
+  const fondo = new THREE.Mesh(new THREE.CircleGeometry(0.33, 48), new THREE.MeshBasicMaterial({ color: 0x0c1628, transparent: true, opacity: 0.92 }));
+  fondo.position.z = -0.01;
+  const tubo = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.22, 0.6, 32, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false }));
   tubo.rotation.x = Math.PI / 2;
   tubo.position.z = -0.3;
-  grupo.add(anillo, disco, tubo);
-  grupo.userData = { disco, anillo };
+  grupo.add(fondo, anillo, tubo);
+  grupo.userData = { anillo };
   return grupo;
 }
 
 function crearPaquete() {
   const grupo = new THREE.Group();
   const caja = new THREE.BoxGeometry(0.22, 0.22, 0.22);
-  const material = new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0xff1638, emissiveIntensity: 0.6, metalness: 0.3, roughness: 0.2, transparent: true, opacity: 0.85 });
+  const material = new THREE.MeshStandardMaterial({ color: 0xcfe3ff, emissive: 0x5aa9ff, emissiveIntensity: 0.55, metalness: 0.3, roughness: 0.2, transparent: true, opacity: 0.85 });
   const cubo = new THREE.Mesh(caja, material);
   const orilla = new THREE.LineSegments(new THREE.EdgesGeometry(caja), new THREE.LineBasicMaterial({ color: 0xffffff }));
   grupo.add(cubo, orilla);
@@ -122,18 +146,19 @@ AFRAME.registerComponent('router-humano', {
     this.nivel = 1;
     this.paquete = null;
     this.lanzamiento = null;
+    this.explicacion = null;
     this.construirEscena();
     this.el.sceneEl.addEventListener('boton-presionado', (e) => this.presionar(e.detail.accion, e.detail.valor));
     window.addEventListener('keydown', (e) => this.teclaFisica(e));
-    this.asignarPortales();
+    this.asignarPuertas();
     this.mostrar('inicio');
     window.juego = this; // para probar desde la consola
   },
 
   // --- construcción ---
 
-  crearBoton(pantalla, texto, x, y, opciones) {
-    const el = crearEntidad(this.pantallas[pantalla], { position: `${x} ${y} 0.01`, boton: Object.assign({ texto }, opciones) });
+  crearBoton(pantalla, textoBoton, x, y, opciones) {
+    const el = crearEntidad(this.pantallas[pantalla], { position: `${x} ${y} 0.01`, boton: Object.assign({ texto: textoBoton }, opciones) });
     this.botones[pantalla].push(el);
     return el;
   },
@@ -143,46 +168,49 @@ AFRAME.registerComponent('router-humano', {
     ['inicio', 'juego', 'fin'].forEach((n) => { this.pantallas[n] = crearEntidad(consola, { visible: false }); });
 
     const ini = this.pantallas.inicio;
-    this.lienzoTitulo = crearEntidad(ini, { lienzo: 'ancho: 1.5; alto: 0.42', position: '0 0.22 0' });
-    this.crearBoton('inicio', 'Practicar (sin tiempo)', -0.5, -0.1, { ancho: 0.46, alto: 0.15, accion: 'practicar' });
-    this.crearBoton('inicio', 'Empezar ronda · 3 min', 0.02, -0.1, { ancho: 0.5, alto: 0.15, accion: 'empezar', estilo: 'principal' });
-    this.crearBoton('inicio', 'Menú de juegos', 0.53, -0.1, { ancho: 0.44, alto: 0.15, accion: 'menu' });
-    this.lienzoSeguridad = crearEntidad(ini, { lienzo: 'ancho: 1.5; alto: 0.17', position: '0 -0.35 0' });
+    this.lienzoTitulo = crearEntidad(ini, { lienzo: 'ancho: 1.5; alto: 0.5', position: '0 0.2 0' });
+    this.crearBoton('inicio', 'Practicar (sin tiempo)', -0.5, -0.17, { ancho: 0.46, alto: 0.14, accion: 'practicar' });
+    this.crearBoton('inicio', 'Empezar ronda · 3 min', 0.02, -0.17, { ancho: 0.5, alto: 0.14, accion: 'empezar', estilo: 'principal' });
+    this.crearBoton('inicio', 'Menú de juegos', 0.53, -0.17, { ancho: 0.44, alto: 0.14, accion: 'menu' });
+    this.lienzoSeguridad = crearEntidad(ini, { lienzo: 'ancho: 1.5; alto: 0.14', position: '0 -0.37 0' });
 
     const jue = this.pantallas.juego;
     this.lienzoBarra = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.12', position: '0 0.38 0' });
-    this.lienzoInfo = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.42', position: '0 0.09 0' });
-    this.lienzoMensaje = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.08', position: '0 -0.18 0' });
-    this.crearBoton('juego', 'Saltar', -0.4, -0.35, { ancho: 0.32, alto: 0.11, accion: 'saltar' });
-    this.botonTerminar = this.crearBoton('juego', 'Terminar', 0, -0.35, { ancho: 0.32, alto: 0.11, accion: 'terminar' });
+    this.lienzoInfo = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.46', position: '0 0.07 0' });
+    this.lienzoMensaje = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.08', position: '0 -0.22 0' });
+    this.crearBoton('juego', 'Saltar', -0.4, -0.36, { ancho: 0.32, alto: 0.1, accion: 'saltar' });
+    this.botonTerminar = this.crearBoton('juego', 'Terminar', 0, -0.36, { ancho: 0.32, alto: 0.1, accion: 'terminar' });
 
     const fin = this.pantallas.fin;
     this.lienzoResultado = crearEntidad(fin, { lienzo: 'ancho: 1.5; alto: 0.66', position: '0 0.1 0' });
     this.crearBoton('fin', 'Nueva ronda', -0.33, -0.35, { ancho: 0.58, alto: 0.14, accion: 'nueva', estilo: 'principal' });
     this.crearBoton('fin', 'Menú de juegos', 0.33, -0.35, { ancho: 0.58, alto: 0.14, accion: 'menu' });
 
-    // portales alrededor del jugador
-    this.portales = {};
+    // puertas alrededor del jugador: anillo, dibujo y nombre
+    this.puertas = {};
     window.ROUTER.destinos.forEach((d) => {
       const el = crearEntidad(this.el, { visible: false });
-      const grupo = crearPortal(d.color);
+      const grupo = crearPuerta(d.color);
       el.setObject3D('mesh', grupo);
-      const etiqueta = crearEntidad(el, { lienzo: 'ancho: 0.8; alto: 0.15', position: '0 0.5 0' });
+      const dibujo = crearEntidad(el, { lienzo: 'ancho: 0.46; alto: 0.46', position: '0 0 0.01' });
+      const pintarDibujo = (img) => pintar(dibujo, (ctx, w, h) => { if (img) ctx.drawImage(img, w * 0.12, h * 0.12, w * 0.76, h * 0.76); });
+      pintarDibujo(imagenSVG(window.ROUTER.iconos[d.icono], pintarDibujo));
+      const etiqueta = crearEntidad(el, { lienzo: 'ancho: 0.82; alto: 0.15', position: '0 0.5 0' });
       pintar(etiqueta, (ctx, w, h) => {
-        rectRedondo(ctx, 4, 4, w - 8, h - 8, 20);
-        ctx.fillStyle = 'rgba(5, 5, 6, 0.85)';
+        rectRedondo(ctx, 4, 4, w - 8, h - 8, h / 2 - 4);
+        ctx.fillStyle = 'rgba(6, 8, 13, 0.9)';
         ctx.fill();
         ctx.lineWidth = 4;
         ctx.strokeStyle = d.color;
         ctx.stroke();
-        texto(ctx, d.nombre, w / 2, h / 2 + 2, { tam: h * 0.55, peso: 800, color: d.color, alinear: 'center' });
+        texto(ctx, d.nombre, w / 2, h / 2 + 2, { tam: h * 0.52, peso: 700, color: COLOR.texto, alinear: 'center' });
       });
-      el.addEventListener('mouseenter', () => el.object3D.scale.setScalar(1.15));
+      el.addEventListener('mouseenter', () => el.object3D.scale.setScalar(1.12));
       el.addEventListener('mouseleave', () => el.object3D.scale.setScalar(1));
       el.addEventListener('click', () => {
         if (el.getAttribute('visible')) this.presionar('destino', d.nombre);
       });
-      this.portales[d.nombre] = { el, grupo, datos: d };
+      this.puertas[d.nombre] = { el, grupo, datos: d };
       this.botones.juego.push(el);
     });
 
@@ -191,17 +219,17 @@ AFRAME.registerComponent('router-humano', {
     this.paqueteEl = crearEntidad(this.el, {});
     this.paquete3D = crearPaquete();
     this.paqueteEl.setObject3D('mesh', this.paquete3D);
-    this.etiquetaPaquete = crearEntidad(this.paqueteEl, { lienzo: 'ancho: 0.7; alto: 0.13', position: '0 0.22 0' });
+    this.etiquetaPaquete = crearEntidad(this.paqueteEl, { lienzo: 'ancho: 0.78; alto: 0.14', position: '0 0.23 0' });
     this.paqueteEl.object3D.position.copy(this.casaPaquete);
 
     this.dibujarInicio();
   },
 
-  /** Pone los portales del nivel en lugares al azar alrededor del jugador. */
-  asignarPortales() {
+  /** Pone las puertas del nivel en lugares al azar alrededor del jugador. */
+  asignarPuertas() {
     const disponibles = destinosDelNivel(this.nivel).map((d) => d.nombre);
     const lugares = LUGARES.slice().sort(() => Math.random() - 0.5);
-    Object.values(this.portales).forEach((p) => {
+    Object.values(this.puertas).forEach((p) => {
       const i = disponibles.indexOf(p.datos.nombre);
       if (i < 0) {
         p.el.setAttribute('visible', false);
@@ -209,7 +237,7 @@ AFRAME.registerComponent('router-humano', {
       }
       const lugar = lugares[i];
       const rad = THREE.MathUtils.degToRad(lugar.a);
-      p.el.object3D.position.set(Math.sin(rad) * CONFIG.radioPortales, lugar.y, -Math.cos(rad) * CONFIG.radioPortales);
+      p.el.object3D.position.set(Math.sin(rad) * CONFIG.radioPuertas, lugar.y, -Math.cos(rad) * CONFIG.radioPuertas);
       p.el.object3D.rotation.set(0, -rad, 0);
       p.el.setAttribute('visible', true);
     });
@@ -235,17 +263,19 @@ AFRAME.registerComponent('router-humano', {
       this.mostrar('inicio');
     } else if (this.pantalla === 'juego') {
       if (accion === 'terminar') return this.terminar();
-      if (this.bloqueado() || this.lanzamiento) return;
+      if (this.bloqueado() || this.lanzamiento) return null;
       if (accion === 'destino') this.elegir(valor);
       if (accion === 'saltar') {
         this.saltados += 1;
+        this.explicar(false);
         this.bloquear('Saltaste el paquete');
         this.nuevoPaquete();
       }
     }
+    return null;
   },
 
-  /** En la computadora: S, B, I, V, T, D eligen el destino. */
+  /** En la computadora: S, B, I, V, L, X eligen la puerta. */
   teclaFisica(e) {
     if (this.pantalla !== 'juego') return;
     const destino = destinosDelNivel(this.nivel).find((d) => d.tecla === e.key.toLowerCase());
@@ -260,14 +290,15 @@ AFRAME.registerComponent('router-humano', {
     this.nivel = 1;
     this.bloqueoHasta = 0;
     this.mensaje = null;
+    this.explicacion = null;
     this.lanzamiento = null;
     this.finRonda = performance.now() + CONFIG.segundosRonda * 1000;
     this.botonTerminar.setAttribute('visible', modo === 'practica');
     this.mostrar('juego');
-    this.asignarPortales();
+    this.asignarPuertas();
     this.nuevoPaquete();
     this.dibujarTodo();
-    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Miren a su alrededor: ahí están los portales', COLOR.acento);
+    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Miren a su alrededor: ahí están las puertas', COLOR.acento);
     sonido.nivel();
   },
 
@@ -275,30 +306,41 @@ AFRAME.registerComponent('router-humano', {
     this.paquete = generarPaquete(this.nivel, this.paquete);
     this.paqueteEl.object3D.position.copy(this.casaPaquete);
     this.paqueteEl.object3D.visible = true;
-    this.paquete3D.userData.material.emissive.setHex(0xff1638);
+    const ip = this.paquete.ip;
     pintar(this.etiquetaPaquete, (ctx, w, h) => {
-      rectRedondo(ctx, 4, 4, w - 8, h - 8, 18);
-      ctx.fillStyle = 'rgba(5, 5, 6, 0.9)';
+      rectRedondo(ctx, 4, 4, w - 8, h - 8, 22);
+      ctx.fillStyle = 'rgba(6, 8, 13, 0.92)';
       ctx.fill();
-      texto(ctx, this.paquete.ip, w / 2, h / 2 + 3, { tam: h * 0.62, peso: 800, alinear: 'center', fuente: MONO });
+      dibujarIP(ctx, ip, w / 2, h / 2 + 3, h * 0.6, false);
     });
     this.dibujarInfo();
   },
 
+  /** Guarda la explicación del paquete actual para mostrarla unos segundos. */
+  explicar(correcto) {
+    this.explicacion = {
+      correcto,
+      texto: `${explicar(this.paquete.ip, this.nivel)} → ${this.paquete.destino}`,
+      hasta: performance.now() + CONFIG.segundosExplicacion * 1000,
+    };
+  },
+
   elegir(nombre) {
-    const portal = this.portales[nombre];
+    const puerta = this.puertas[nombre];
     const correcto = nombre === this.paquete.destino;
+    this.explicar(correcto);
     if (correcto) {
       this.puntaje += 1;
       sonido.bien();
       this.avisar(`¡Entregado en ${nombre}! · +1`, COLOR.bien);
-      this.lanzamiento = { inicio: performance.now(), hasta: portal.el.object3D.position.clone(), portal };
+      this.lanzamiento = { inicio: performance.now(), hasta: puerta.el.object3D.position.clone(), puerta };
       this.dibujarBarra();
     } else {
       this.errores += 1;
-      this.paquete3D.userData.material.emissive.setHex(0xff5468);
+      this.paquete3D.userData.material.emissive.setHex(0xff5c6c);
       this.bloquear(`Ese paquete no va a ${nombre}`);
     }
+    this.dibujarInfo();
   },
 
   terminarLanzamiento() {
@@ -306,11 +348,11 @@ AFRAME.registerComponent('router-humano', {
     const nivelNuevo = Math.min(CONFIG.nivelMaximo, 1 + Math.floor(this.puntaje / CONFIG.aciertosPorNivel));
     if (nivelNuevo > this.nivel) {
       this.nivel = nivelNuevo;
-      this.asignarPortales();
-      this.avisar(this.nivel === 3 ? '¡Nivel 3! SATÉLITE, DESCARTAR… y los portales se mueven' : '¡Nivel 2! Nuevo portal: SERVIDORES. ¡Cuidado con las trampas!', COLOR.acento);
+      this.asignarPuertas();
+      this.avisar(this.nivel === 3 ? '¡Nivel 3! LABORATORIO, BASURA… y las puertas se mueven' : '¡Nivel 2! Nueva puerta: SERVIDORES. ¡Ojo con las redes parecidas!', COLOR.acento);
       sonido.nivel();
     } else if (this.nivel === 3) {
-      this.asignarPortales();
+      this.asignarPuertas();
     }
     this.nuevoPaquete();
     this.dibujarBarra();
@@ -340,15 +382,15 @@ AFRAME.registerComponent('router-humano', {
   },
 
   tick(t) {
-    // portales girando y paquete flotando
-    Object.values(this.portales).forEach((p, i) => {
-      p.grupo.userData.disco.rotation.z = t / (500 + i * 60);
+    // puertas latiendo y paquete flotando
+    Object.values(this.puertas).forEach((p, i) => {
+      p.grupo.userData.anillo.scale.setScalar(1 + Math.sin(t / 400 + i) * 0.03);
     });
     const obj = this.paqueteEl.object3D;
     if (!this.lanzamiento) {
       obj.position.y = this.casaPaquete.y + Math.sin(t / 400) * 0.03;
       this.paquete3D.rotation.y = t / 900;
-      if (!this.bloqueado()) this.paquete3D.userData.material.emissive.setHex(0xff1638);
+      if (!this.bloqueado()) this.paquete3D.userData.material.emissive.setHex(0x5aa9ff);
     }
 
     if (this.pantalla !== 'juego') return;
@@ -357,9 +399,9 @@ AFRAME.registerComponent('router-humano', {
       const f = (ahora - this.lanzamiento.inicio) / CONFIG.msLanzamiento;
       if (f >= 1) {
         obj.visible = false;
-        this.lanzamiento.portal.el.object3D.scale.setScalar(1 + 0.3 * Math.max(0, 1.6 - f));
+        this.lanzamiento.puerta.el.object3D.scale.setScalar(1 + 0.3 * Math.max(0, 1.6 - f));
         if (f > 1.6) {
-          this.lanzamiento.portal.el.object3D.scale.setScalar(1);
+          this.lanzamiento.puerta.el.object3D.scale.setScalar(1);
           this.terminarLanzamiento();
         }
       } else {
@@ -375,7 +417,8 @@ AFRAME.registerComponent('router-humano', {
     if (segundo !== this.ultimoSegundo) {
       this.ultimoSegundo = segundo;
       this.dibujarBarra();
-      if (this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) this.dibujarInfo();
+      const explicando = this.explicacion && ahora < this.explicacion.hasta + 1000;
+      if ((this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) || explicando) this.dibujarInfo();
       if (this.mensaje && ahora > this.mensaje.hasta) {
         this.mensaje = null;
         this.dibujarMensaje();
@@ -393,15 +436,20 @@ AFRAME.registerComponent('router-humano', {
 
   dibujarInicio() {
     pintar(this.lienzoTitulo, (ctx, w, h) => {
-      texto(ctx, 'VR ITC GAMES · DENTRO DE LA COMPUTADORA', w / 2, h * 0.13, { tam: 44, color: COLOR.acento, peso: 700, alinear: 'center' });
-      texto(ctx, 'Router humano', w / 2, h * 0.4, { tam: 110, peso: 700, alinear: 'center' });
-      texto(ctx, 'Lleguen los paquetes al portal correcto. ¡Volteen a su alrededor!', w / 2, h * 0.66, { tam: 42, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, 'Cuando estén listos, presionen Empezar', w / 2, h * 0.88, { tam: 44, peso: 600, color: COLOR.acento, alinear: 'center' });
+      texto(ctx, 'ENLACE VR · DENTRO DE LA COMPUTADORA', w / 2, h * 0.08, { tam: 34, color: COLOR.acento, peso: 600, alinear: 'center' });
+      texto(ctx, 'Router humano', w / 2, h * 0.25, { tam: 92, peso: 700, alinear: 'center' });
+      dibujarIP(ctx, '192.168.1.45', w * 0.25, h * 0.5, 64, true);
+      const pasos = [
+        '1. Dicta la RED: los 3 primeros números.',
+        '2. El equipo te dice la puerta.',
+        '3. Voltea y dispárale a esa puerta.',
+      ];
+      pasos.forEach((p, i) => texto(ctx, p, w * 0.51, h * (0.45 + i * 0.13), { tam: 40, peso: 500 }));
+      texto(ctx, 'El último número (el equipo) no importa: el router solo mira la red.', w / 2, h * 0.92, { tam: 32, color: COLOR.tenue, alinear: 'center' });
     });
     pintar(this.lienzoSeguridad, (ctx, w, h) => {
-      fondoPanel(ctx, w, h, '#121216');
-      texto(ctx, 'Gira la cabeza, no te levantes · Correa del control en la muñeca', w / 2, h * 0.36, { tam: 38, alinear: 'center' });
-      texto(ctx, 'Al terminar, quítate el visor con las dos manos y pásalo con cuidado', w / 2, h * 0.7, { tam: 34, color: COLOR.tenue, alinear: 'center' });
+      fondoPanel(ctx, w, h, '#102039');
+      texto(ctx, 'Gira la cabeza, no te levantes · Correa del control en la muñeca', w / 2, h * 0.5, { tam: 38, alinear: 'center' });
     });
   },
 
@@ -422,18 +470,25 @@ AFRAME.registerComponent('router-humano', {
   },
 
   dibujarInfo() {
+    const explicacion = this.explicacion && performance.now() < this.explicacion.hasta ? this.explicacion : null;
     pintar(this.lienzoInfo, (ctx, w, h) => {
       fondoPanel(ctx, w, h);
-      texto(ctx, 'PAQUETE ENTRANTE · PARA:', 40, h * 0.14, { tam: 36, peso: 600, color: COLOR.tenue });
-      texto(ctx, this.paquete ? this.paquete.ip : '', w / 2, h * 0.45, { tam: 120, peso: 800, alinear: 'center', fuente: MONO });
-      texto(ctx, 'Léanla número por número. El equipo tiene la tabla de rutas.', w / 2, h * 0.72, { tam: 36, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, 'Apunta al portal correcto y presiona el gatillo', w / 2, h * 0.88, { tam: 38, peso: 600, color: COLOR.acento, alinear: 'center' });
-      const restante = (this.bloqueoHasta - performance.now()) / 1000;
-      if (restante > 0) {
-        ctx.fillStyle = 'rgba(40, 6, 14, 0.88)';
-        rectRedondo(ctx, 4, 4, w - 8, h - 8, 24);
+      texto(ctx, 'PAQUETE PARA:', 40, h * 0.11, { tam: 34, peso: 600, color: COLOR.tenue });
+      if (this.paquete) dibujarIP(ctx, this.paquete.ip, w / 2, h * 0.37, 112, true);
+      if (explicacion) {
+        rectRedondo(ctx, 30, h * 0.74, w - 60, h * 0.2, 18);
+        ctx.fillStyle = explicacion.correcto ? 'rgba(61, 220, 151, 0.14)' : 'rgba(255, 92, 108, 0.14)';
         ctx.fill();
-        texto(ctx, '¡CONTRAATAQUE DE ULTRÓN!', w / 2, h * 0.4, { tam: 76, peso: 800, color: COLOR.mal, alinear: 'center' });
+        texto(ctx, `${explicacion.correcto ? '✓' : '✗'}  ${explicacion.texto}`, w / 2, h * 0.84, { tam: 38, peso: 600, color: explicacion.correcto ? COLOR.bien : COLOR.mal, alinear: 'center' });
+      } else {
+        texto(ctx, this.modo === 'practica' ? 'Pista: dicten solo los números azules. ¿Está esa red en la tabla?' : 'Dicta la red · el equipo te dice la puerta · voltea y dispara', w / 2, h * 0.84, { tam: 36, peso: 500, color: COLOR.acento, alinear: 'center' });
+      }
+      const restante = (this.bloqueoHasta - performance.now()) / 1000;
+      if (restante > 0 && !explicacion) {
+        ctx.fillStyle = 'rgba(8, 14, 28, 0.92)';
+        rectRedondo(ctx, 4, 4, w - 8, h - 8, 26);
+        ctx.fill();
+        texto(ctx, '¡ENLACE CAÍDO!', w / 2, h * 0.4, { tam: 80, peso: 700, color: COLOR.mal, alinear: 'center' });
         texto(ctx, `Esperen ${Math.ceil(restante)} s · nadie habla`, w / 2, h * 0.65, { tam: 50, alinear: 'center' });
       }
     });
@@ -450,13 +505,13 @@ AFRAME.registerComponent('router-humano', {
     const practica = this.modo === 'practica';
     pintar(this.lienzoResultado, (ctx, w, h) => {
       fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : 'TIEMPO // RETO COMPLETADO', w / 2, h * 0.11, { tam: 54, peso: 800, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Ultrón pierde esta energía! Anótenla en el marcador', w / 2, h * 0.25, { tam: 46, peso: 700, color: COLOR.bien, alinear: 'center' });
-      texto(ctx, `${this.puntaje}`, w / 2, h * 0.46, { tam: 160, peso: 800, alinear: 'center' });
+      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.11, { tam: 54, peso: 700, color: COLOR.acento, alinear: 'center' });
+      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.25, { tam: 46, peso: 700, color: COLOR.bien, alinear: 'center' });
+      texto(ctx, `${this.puntaje}`, w / 2, h * 0.46, { tam: 160, peso: 700, alinear: 'center' });
       texto(ctx, this.puntaje === 1 ? 'paquete entregado' : 'paquetes entregados', w / 2, h * 0.62, { tam: 40, color: COLOR.tenue, alinear: 'center' });
       texto(ctx, `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`, w / 2, h * 0.72, { tam: 34, color: COLOR.tenue, alinear: 'center' });
       rectRedondo(ctx, 40, h * 0.8, w - 80, h * 0.15, 16);
-      ctx.fillStyle = '#16161b';
+      ctx.fillStyle = '#13233D';
       ctx.fill();
       texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.875, { tam: 36, peso: 600, alinear: 'center' });
     });

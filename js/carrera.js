@@ -1,4 +1,4 @@
-/* VR ITC Games · Carrera de palabras (prototipo 1)
+/* Enlace VR · Carrera de palabras (prototipo 1)
  *
  * El Operador ve una palabra escrita en binario, un byte por letra.
  * El equipo busca las letras en el Manual de campo y el Operador las escribe.
@@ -52,8 +52,8 @@ AFRAME.registerComponent('carrera-palabras', {
 
   construirEscena() {
     // marco del panel
-    this.crear(this.el, { geometry: 'primitive: plane; width: 2.26; height: 1.86', material: 'shader: flat; color: #ad001d; opacity: 0.55; transparent: true', position: '0 -0.12 -0.035' });
-    this.crear(this.el, { geometry: 'primitive: plane; width: 2.22; height: 1.82', material: 'shader: flat; color: #050506; opacity: 0.94; transparent: true', position: '0 -0.12 -0.03' });
+    this.crear(this.el, { geometry: 'primitive: plane; width: 2.26; height: 1.86', material: 'shader: flat; color: #2F6FBF; opacity: 0.55; transparent: true', position: '0 -0.12 -0.035' });
+    this.crear(this.el, { geometry: 'primitive: plane; width: 2.22; height: 1.82', material: 'shader: flat; color: #06080D; opacity: 0.94; transparent: true', position: '0 -0.12 -0.03' });
 
     ['inicio', 'juego', 'fin'].forEach((nombre) => {
       this.pantallas[nombre] = this.crear(this.el, { visible: false });
@@ -247,13 +247,13 @@ AFRAME.registerComponent('carrera-palabras', {
 
   dibujarInicio() {
     pintar(this.lienzoTitulo, (ctx, w, h) => {
-      texto(ctx, 'VR ITC GAMES', w / 2, h * 0.13, { tam: 56, color: COLOR.acento, peso: 700, alinear: 'center' });
+      texto(ctx, 'ENLACE VR', w / 2, h * 0.13, { tam: 56, color: COLOR.acento, peso: 700, alinear: 'center' });
       texto(ctx, 'Carrera de palabras', w / 2, h * 0.35, { tam: 120, peso: 700, alinear: 'center' });
       texto(ctx, 'Descifren todas las palabras que puedan en 3 minutos.', w / 2, h * 0.6, { tam: 56, color: COLOR.tenue, alinear: 'center' });
       texto(ctx, 'Cuando estén listos, presionen Empezar', w / 2, h * 0.86, { tam: 54, peso: 600, color: COLOR.acento, alinear: 'center' });
     });
     pintar(this.lienzoSeguridad, (ctx, w, h) => {
-      fondoPanel(ctx, w, h, '#121216');
+      fondoPanel(ctx, w, h, '#102039');
       texto(ctx, 'Juega sentado · Correa del control en la muñeca', w / 2, h * 0.36, { tam: 46, alinear: 'center' });
       texto(ctx, 'Al terminar, quítate el visor con las dos manos y pásalo con cuidado', w / 2, h * 0.7, { tam: 40, color: COLOR.tenue, alinear: 'center' });
     });
@@ -303,7 +303,7 @@ AFRAME.registerComponent('carrera-palabras', {
         ctx.stroke();
         const lado = alto * 0.86;
         rectRedondo(ctx, 1070, y - lado / 2, lado, lado, 14);
-        ctx.fillStyle = '#16161b';
+        ctx.fillStyle = '#13233D';
         ctx.fill();
         ctx.lineWidth = i === this.escrito.length ? 8 : 4;
         ctx.strokeStyle = i === this.escrito.length ? COLOR.acento : 'rgba(255,255,255,.2)';
@@ -319,7 +319,7 @@ AFRAME.registerComponent('carrera-palabras', {
         ctx.fillStyle = 'rgba(40, 6, 14, 0.82)';
         rectRedondo(ctx, 4, 4, w - 8, h - 8, 24);
         ctx.fill();
-        texto(ctx, '¡CONTRAATAQUE DE ULTRÓN!', w / 2, h * 0.38, { tam: 90, peso: 800, color: COLOR.mal, alinear: 'center' });
+        texto(ctx, '¡ENLACE CAÍDO!', w / 2, h * 0.38, { tam: 90, peso: 800, color: COLOR.mal, alinear: 'center' });
         texto(ctx, `Esperen ${Math.ceil(restante)} s · nadie habla`, w / 2, h * 0.62, { tam: 60, alinear: 'center' });
       }
     });
@@ -336,13 +336,13 @@ AFRAME.registerComponent('carrera-palabras', {
     const practica = this.modo === 'practica';
     pintar(this.lienzoResultado, (ctx, w, h) => {
       fondoPanel(ctx, w, h);
-      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : 'TIEMPO // RETO COMPLETADO', w / 2, h * 0.12, { tam: 64, peso: 800, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Ultrón pierde esta energía! Anótenla en el marcador', w / 2, h * 0.27, { tam: 56, peso: 700, color: COLOR.bien, alinear: 'center' });
+      texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.12, { tam: 64, peso: 800, color: COLOR.acento, alinear: 'center' });
+      texto(ctx, practica ? 'Puntaje de práctica (no se anota)' : '¡Anoten este puntaje en el marcador!', w / 2, h * 0.27, { tam: 56, peso: 700, color: COLOR.bien, alinear: 'center' });
       texto(ctx, `${this.puntaje}`, w / 2, h * 0.47, { tam: 190, peso: 800, alinear: 'center' });
       texto(ctx, this.puntaje === 1 ? 'palabra descifrada' : 'palabras descifradas', w / 2, h * 0.62, { tam: 50, color: COLOR.tenue, alinear: 'center' });
       texto(ctx, `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltadas: ${this.saltadas}`, w / 2, h * 0.72, { tam: 42, color: COLOR.tenue, alinear: 'center' });
       rectRedondo(ctx, 60, h * 0.79, w - 120, h * 0.16, 18);
-      ctx.fillStyle = '#16161b';
+      ctx.fillStyle = '#13233D';
       ctx.fill();
       texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, h * 0.87, { tam: 44, peso: 600, alinear: 'center' });
     });
