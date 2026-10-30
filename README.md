@@ -145,3 +145,7 @@ The cooperative format is inspired by *Keep Talking and Nobody Explodes*. The da
 ## Scoring without taking the headset
 
 At the end of each round the headset shows the score and an 8-character verification code (game, team, score and time, checksummed). Teams write both on paper; `marcador.html` verifies them and builds the team scoreboard. Optionally, `js/config.js` points to a Google Apps Script web app (`apps_script/`) so scores are sent to Google Sheets automatically. `empezar.html` is a one-page quick start with the team score sheet.
+
+## CODEXIA edition
+
+`codexia/` is a copy branded for the CODEXIA hackathon (Ultron, black and red) used as station 04 · Networks: 4 games, a mission that reveals Ultron's IP address and GPS location, and water-care words. It lives at `mparra37.github.io/ITC-VR-Games/codexia/` and doesn't change Enlace VR. See `codexia/LEEME.md` (Spanish).

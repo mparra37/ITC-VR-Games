@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<!-- CODEXIA · Ghost Network: guía del taller y material para imprimir -->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CODEXIA · Guía del taller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --negro: #050405; --panel: #0E0A0B; --rojo: #FF1638; --rojo-2: #C8102E; --blanco: #E6E8EB; --gris: #9DA0A7; --linea: rgba(255, 255, 255, .12); --agua: #3FA9F5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--negro); color: var(--blanco); font: 18px/1.5 "Rajdhani", "Segoe UI", system-ui, sans-serif; }
+    main { max-width: 860px; margin: 0 auto; padding: 36px 16px 70px; }
+    a { color: var(--rojo); }
+    .volver { font: 600 14px "IBM Plex Mono", monospace; text-decoration: none; }
+    .etiqueta { font: 600 13px "IBM Plex Mono", monospace; color: var(--rojo); letter-spacing: 2px; margin: 22px 0 6px; }
+    h1 { font: 800 clamp(26px, 6vw, 40px) "Orbitron", sans-serif; margin: 0 0 12px; }
+    h2 { font: 700 18px "Orbitron", sans-serif; letter-spacing: 1px; color: var(--rojo); margin: 34px 0 12px; }
+    p { color: var(--gris); margin: 0 0 12px; }
+    p b, li b { color: var(--blanco); }
+    table { width: 100%; border-collapse: collapse; font-size: 17px; }
+    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+    th { font: 600 12px "IBM Plex Mono", monospace; color: var(--gris); letter-spacing: 1px; }
+    td.min { font: 600 15px "IBM Plex Mono", monospace; color: var(--rojo); white-space: nowrap; }
+    .tabla { overflow-x: auto; }
+    .descargas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+    .descarga { display: block; padding: 16px; border: 1px solid var(--linea); border-radius: 6px; background: var(--panel); text-decoration: none; color: var(--blanco); }
+    .descarga:hover, .descarga:focus-visible { border-color: var(--rojo); outline: none; }
+    .descarga b { display: block; font: 700 15px "Orbitron", sans-serif; margin-bottom: 4px; }
+    .descarga span { color: var(--gris); font-size: 16px; }
+    .descarga.zip { border-color: var(--rojo-2); }
+    ul { color: var(--gris); padding-left: 22px; }
+    .agua { border-left: 3px solid var(--agua); padding: 4px 14px; }
+    .agua b { color: var(--agua); }
+  </style>
+</head>
+<body>
+<main>
+  <a class="volver" href="index.html">← Menú de la misión</a>
+  <p class="etiqueta">CODEXIA // GHOST NETWORK // ESTACIÓN 04 · REDES</p>
+  <h1>Guía del taller</h1>
+  <p>Ultrón se escondió en la red de agua de la ciudad. En 40 minutos, cada equipo de 5 consigue su <b>IP</b> (tres juegos) y su <b>ubicación GPS</b> (misión final). La IP y el GPS, anotados en la <b>Bitácora</b>, son lo que llevan al reto final. Un visor Meta Quest por equipo; el resto del equipo trabaja con el manual impreso.</p>
+
+  <h2>Cómo se ganan las pistas</h2>
+  <div class="tabla"><table>
+    <thead><tr><th>JUEGO</th><th>RONDA</th><th>PISTA</th></tr></thead>
+    <tbody id="pistas"></tbody>
+  </table></div>
+  <p style="margin-top:10px">Las pistas solo se ganan en <b>rondas</b> (no en práctica) y se guardan en el visor. Entre un grupo y otro, toquen <b>Nuevo equipo</b> en el menú.</p>
+
+  <h2>Guion de 40 minutos</h2>
+  <div class="tabla"><table>
+    <tbody>
+      <tr><td class="min">0:00</td><td>Bienvenida, la misión y los videos del menú (▶ Ver los videos).</td></tr>
+      <tr><td class="min">0:05</td><td>Cada equipo en su visor: número de equipo y <b>Nuevo equipo</b>. Repartan la Bitácora y los manuales.</td></tr>
+      <tr><td class="min">0:08</td><td>Router humano (3 min).</td></tr>
+      <tr><td class="min">0:15</td><td>Arma la computadora (5 min).</td></tr>
+      <tr><td class="min">0:22</td><td>Carrera de palabras (3 min): palabras y consejos del agua.</td></tr>
+      <tr><td class="min">0:28</td><td>Misión final: lleven a Ultrón al agua (5 min).</td></tr>
+      <tr><td class="min">0:35</td><td>Anoten la IP y el GPS. Un minuto de agua: ¿qué consejo les tocó?</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Material para imprimir</h2>
+  <div class="descargas">
+    <a class="descarga zip" href="material/codexia_ghost_network_material.zip" download><b>Todo en un ZIP</b><span>Los 6 PDF, tamaño carta</span></a>
+    <a class="descarga" href="material/00_Guia_del_taller.pdf"><b>00 · Guía del taller</b><span>Facilitador. Incluye la clave (IP y GPS)</span></a>
+    <a class="descarga" href="material/01_Bitacora_de_la_mision.pdf"><b>01 · Bitácora</b><span>1 por equipo</span></a>
+    <a class="descarga" href="material/02_Manual_Router_humano.pdf"><b>02 · Manual Router humano</b><span>1 por equipo</span></a>
+    <a class="descarga" href="material/03_Manual_Arma_la_computadora.pdf"><b>03 · Manual Arma la computadora</b><span>1 por equipo, a color</span></a>
+    <a class="descarga" href="material/04_Manual_Carrera_de_palabras.pdf"><b>04 · Manual Carrera de palabras</b><span>1 por equipo</span></a>
+    <a class="descarga" href="material/05_Manual_Mision_final.pdf"><b>05 · Manual Misión final</b><span>Los 12 sectores con antenas y la presa</span></a>
+  </div>
+
+  <h2>Antes de empezar</h2>
+  <ul>
+    <li>Visores y controles cargados, límite <b>estacionario</b>, correas en la muñeca.</li>
+    <li>En el Browser de cada visor: <b>mparra37.github.io/ITC-VR-Games/codexia/</b> (guárdenlo en marcadores) y prueben el Wi-Fi del lugar.</li>
+    <li>Una moneda por equipo para seguir a Ultrón en el mapa.</li>
+    <li>Se juega sentado; el visor se pasa con las dos manos.</li>
+  </ul>
+  <p class="agua"><b>Cuidado del agua:</b> la Carrera de palabras usa palabras del agua y muestra un consejo con cada una, y en la misión final Ultrón termina en la presa. Cierren con la pregunta: <i>¿qué consejo van a cumplir en casa?</i></p>
+</main>
+<script src="js/mision.js"></script>
+<script>
+  const pistas = { router: '1.º y 2.º número de la IP', arma: '3.er número de la IP', carrera: '4.º número de la IP', robot: '1.ª vez al agua: latitud · 2.ª vez: longitud' };
+  const minutos = { router: 3, arma: 5, carrera: 3, robot: 5 };
+  document.getElementById('pistas').innerHTML = Object.entries(window.MISION.juegos).map(([k, j]) =>
+    `<tr><td><b>${k === 'robot' ? 'Misión final · Robot programado' : j.nombre}</b></td><td>${k === 'robot' ? '5 min · cada vez que Ultrón cae al agua' : `${minutos[k]} min · mínimo ${j.minimo} ${j.unidad}`}</td><td>${pistas[k]}</td></tr>`).join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<!-- CODEXIA · Ghost Network: edición del hackathon (ver LEEME.md) -->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CODEXIA · Ghost Network</title>
+  <meta name="description" content="CODEXIA · Estación 04 · Redes: localicen a Ultrón con su IP y su ubicación GPS, en equipo y con realidad virtual.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/marcador.js"></script>
+  <script src="js/mision.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/ambientes.js"></script>
+  <script src="js/menu.js"></script>
+  <style>
+    :root {
+      --negro: #050405; --panel: #0E0A0B; --panel-2: #160C0F; --rojo: #FF1638; --rojo-2: #C8102E;
+      --blanco: #E6E8EB; --gris: #9DA0A7; --gris-2: #6B6E75; --verde: #3DDC97; --agua: #3FA9F5;
+      --linea: rgba(255, 255, 255, .12);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Rajdhani", "Segoe UI", system-ui, sans-serif; font-size: 18px; color: var(--blanco); background: var(--negro); }
+    #menu-web {
+      position: fixed; inset: 0; z-index: 5; overflow-y: auto;
+      background: radial-gradient(ellipse at 50% -10%, rgba(255, 22, 56, .28), transparent 55%), linear-gradient(180deg, rgba(5, 4, 5, .9) 0%, rgba(5, 4, 5, .97) 50%);
+      display: flex; flex-direction: column; align-items: center; padding: 40px 16px 80px;
+    }
+    .contenedor { width: 100%; max-width: 860px; }
+    .marca { display: flex; align-items: center; gap: 14px; }
+    .marca svg { width: 40px; height: 40px; flex: none; }
+    .codexia { font: 800 clamp(38px, 9vw, 64px) "Orbitron", sans-serif; letter-spacing: 4px; margin: 0; line-height: 1; }
+    .codexia span { color: var(--rojo); }
+    .etiqueta { font: 600 13px "IBM Plex Mono", monospace; color: var(--rojo); letter-spacing: 2px; margin: 14px 0 0; }
+    h1.mision { font: 800 clamp(26px, 6vw, 44px) "Orbitron", sans-serif; margin: 26px 0 10px; letter-spacing: 1px; }
+    .historia { color: var(--gris); font-size: 19px; line-height: 1.5; margin: 0 0 22px; max-width: 700px; }
+    .historia b { color: var(--blanco); font-weight: 700; }
+    .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; }
+    .boton {
+      font: 700 15px "Rajdhani", system-ui, sans-serif; letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 4px;
+      color: var(--blanco); background: transparent; border: 1px solid rgba(255, 22, 56, .55);
+    }
+    .boton.principal { background: var(--rojo-2); border-color: var(--rojo); }
+    .boton:hover, .boton:focus-visible { border-color: var(--rojo); box-shadow: 0 0 18px rgba(255, 22, 56, .35); outline: none; }
+    .boton.chico { padding: 7px 12px; font-size: 14px; min-width: 42px; justify-content: center; }
+    .boton.chico[aria-pressed="true"] { background: var(--rojo); color: var(--negro); }
+    .titulo-seccion { display: flex; justify-content: space-between; gap: 8px; color: var(--gris); font: 500 13px "IBM Plex Mono", monospace; letter-spacing: 1px; margin: 0 0 12px; }
+    /* bitácora */
+    .bitacora { border: 1px solid var(--rojo-2); border-radius: 6px; background: var(--panel); padding: 20px; margin-bottom: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px 28px; }
+    .bitacora h2 { grid-column: 1 / -1; margin: 0; font: 700 18px "Orbitron", sans-serif; letter-spacing: 2px; color: var(--rojo); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .dato-mision .etq { font: 500 12px "IBM Plex Mono", monospace; color: var(--gris); letter-spacing: 1px; }
+    .dato-mision .valor { font: 600 clamp(17px, 4.2vw, 26px) "IBM Plex Mono", monospace; margin-top: 4px; white-space: nowrap; }
+    .dato-mision .falta { color: var(--gris-2); }
+    .estado-mision { grid-column: 1 / -1; font-weight: 700; font-size: 17px; }
+    .estado-mision.lista { color: var(--verde); }
+    /* juegos */
+    .retos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+    .reto { display: flex; flex-direction: column; min-height: 220px; padding: 20px; border-radius: 6px; background: var(--panel); border: 1px solid var(--linea); transition: border-color .15s, transform .15s; }
+    .reto:hover, .reto:focus-within { border-color: var(--rojo); transform: translateY(-2px); }
+    .reto-enlace { display: flex; flex-direction: column; flex: 1; text-decoration: none; color: inherit; outline: none; }
+    .area { font: 500 13px "IBM Plex Mono", monospace; color: var(--rojo); letter-spacing: 1px; text-transform: uppercase; }
+    .reto h2 { font: 700 20px "Orbitron", sans-serif; margin: 10px 0 8px; letter-spacing: .5px; }
+    .reto p { margin: 0 0 12px; color: var(--gris); line-height: 1.4; flex: 1; }
+    .pista { font: 600 13px "IBM Plex Mono", monospace; color: var(--blanco); background: var(--panel-2); border-left: 3px solid var(--rojo); padding: 6px 10px; margin-bottom: 12px; }
+    .pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--linea); color: var(--gris-2); font-size: 15px; }
+    .ver-video { font: 700 14px "Rajdhani", system-ui, sans-serif; letter-spacing: 1px; cursor: pointer; flex: none; color: var(--blanco); background: var(--rojo-2); border: 0; border-radius: 4px; padding: 7px 12px; }
+    .ver-video:hover, .ver-video:focus-visible { background: var(--rojo); outline: 2px solid var(--rojo); outline-offset: 2px; }
+    .ajustes { display: flex; flex-wrap: wrap; gap: 14px 28px; margin: 30px 0 0; padding: 16px; border: 1px solid var(--linea); border-radius: 6px; background: var(--panel); }
+    .ajuste { display: flex; flex-direction: column; gap: 8px; }
+    .ajuste-titulo { font: 500 12px "IBM Plex Mono", monospace; color: var(--gris); letter-spacing: 1px; }
+    .equipos { display: flex; flex-wrap: wrap; gap: 6px; }
+    .agua { margin-top: 30px; border-left: 3px solid var(--agua); padding: 6px 16px; color: var(--gris); line-height: 1.5; }
+    .agua b { color: var(--agua); }
+    .nota { margin-top: 18px; color: var(--gris); line-height: 1.5; font-size: 16px; }
+    .nota a { color: var(--rojo); }
+    #ver-web { display: none; position: fixed; left: 12px; top: 12px; z-index: 6; cursor: pointer; font: 700 14px "Rajdhani", system-ui, sans-serif; color: var(--blanco); background: rgba(5, 4, 5, .92); border: 1px solid var(--rojo-2); border-radius: 4px; padding: 10px 16px; }
+    /* video vertical */
+    #ventana-video { border: 1px solid var(--rojo-2); border-radius: 8px; padding: 0; background: var(--negro); color: var(--blanco); width: min(420px, calc(100vw - 32px)); }
+    #ventana-video::backdrop { background: rgba(0, 0, 0, .85); }
+    .video-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; }
+    .video-cabeza h3 { margin: 0; font: 700 17px "Orbitron", sans-serif; }
+    .video-cabeza span { display: block; font: 500 12px "IBM Plex Mono", monospace; color: var(--rojo); }
+    #ventana-video video { display: block; width: 100%; aspect-ratio: 9 / 16; max-height: calc(100vh - 150px); background: #000; }
+    .video-pie { display: flex; justify-content: space-between; gap: 8px; padding: 10px 14px; }
+    .video-pie .boton, .video-cabeza .boton { padding: 8px 12px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <!-- escena 3D: sala de servidores en rojo, el menú y la bitácora dentro del visor -->
+  <a-scene background="color: #050405" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <a-entity ambiente-servidores></a-entity>
+    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+    <a-entity id="jugador">
+      <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #FF1638"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #FF1638"></a-entity>
+    </a-entity>
+    <a-entity menu-juegos></a-entity>
+  </a-scene>
+
+  <div id="menu-web">
+    <div class="contenedor">
+      <div class="marca">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="9" width="22" height="22" transform="rotate(45 20 20)" fill="none" stroke="#FF1638" stroke-width="3"/><rect x="16.5" y="16.5" width="7" height="7" transform="rotate(45 20 20)" fill="#FF1638"/></svg>
+        <p class="codexia">CODE<span>X</span>IA</p>
+      </div>
+      <p class="etiqueta">GHOST NETWORK // ESTACIÓN 04 · REDES // DESBLOQUEA: UBICACIÓN</p>
+      <h1 class="mision">LOCALIZA A ULTRÓN.</h1>
+      <p class="historia">Ultrón se escondió en la <b>red de agua de la ciudad</b>. Con realidad virtual y trabajo en equipo van a rastrear su <b>dirección IP</b> en tres juegos. Con la IP completa hackean su navegación y lo llevan <b>al agua</b> para obtener su <b>ubicación GPS</b>. La IP y el GPS son lo que se llevan al reto final.</p>
+      <div class="acciones">
+        <button id="entrar-vr" class="boton principal" type="button">Entrar a la misión en VR</button>
+        <button id="ver-videos" class="boton" type="button">▶ Ver los videos</button>
+        <a class="boton" href="guia.html">Guía del taller</a>
+      </div>
+
+      <section class="bitacora" aria-live="polite">
+        <h2><span>BITÁCORA DE ESTE VISOR</span><button id="nuevo-equipo" class="boton chico" type="button">Nuevo equipo</button></h2>
+        <div class="dato-mision"><div class="etq">IP DE ULTRÓN</div><div class="valor" id="ip"></div></div>
+        <div class="dato-mision"><div class="etq">UBICACIÓN GPS (LAT, LON)</div><div class="valor" id="gps"></div></div>
+        <div class="estado-mision" id="estado-mision"></div>
+      </section>
+
+      <div class="titulo-seccion"><span>04 JUEGOS · EN ESTE ORDEN</span><span>rondas de 3 a 5 minutos</span></div>
+      <div class="retos" id="juegos"></div>
+
+      <div class="ajustes" aria-label="Ajustes de este visor">
+        <div class="ajuste"><span class="ajuste-titulo">ESTE VISOR ES DEL EQUIPO</span><div class="equipos" id="equipos"></div></div>
+        <div class="ajuste"><span class="ajuste-titulo">MÚSICA</span><button id="musica" class="boton chico" type="button" aria-pressed="true">Sí</button></div>
+      </div>
+
+      <p class="agua"><b>Esta misión también cuida el agua.</b> En la Carrera de palabras, cada mensaje descifrado trae un consejo para no desperdiciarla, y en la misión final Ultrón termina en la presa: el agua es lo que protegemos.</p>
+      <p class="nota">Para el facilitador: la <a href="guia.html">Guía del taller</a> trae el guion de 40 minutos, cómo se ganan las pistas y el material para imprimir. Las pistas solo se ganan en <b>rondas</b> (no en práctica) y quedan guardadas en cada visor: al cambiar de equipo, toquen <b>Nuevo equipo</b>. Se juega sentado y con la correa del control en la muñeca.</p>
+    </div>
+  </div>
+
+  <dialog id="ventana-video" aria-labelledby="video-titulo">
+    <div class="video-cabeza">
+      <div><span id="video-area"></span><h3 id="video-titulo"></h3></div>
+      <button type="button" class="boton" id="video-cerrar" aria-label="Cerrar video">✕</button>
+    </div>
+    <video id="video" controls playsinline preload="metadata"></video>
+    <div class="video-pie">
+      <button type="button" class="boton" id="video-anterior">← Anterior</button>
+      <a class="boton" id="video-jugar" href="#">Jugar</a>
+      <button type="button" class="boton" id="video-siguiente">Siguiente →</button>
+    </div>
+  </dialog>
+
+  <button id="ver-web" type="button">← Menú web</button>
+
+  <script>
+    // bitácora: lo que este visor ya consiguió
+    const pintarBitacora = () => {
+      const ip = document.getElementById('ip');
+      const gps = document.getElementById('gps');
+      ip.textContent = mision.ipTexto();
+      ip.classList.toggle('falta', !mision.ipCompleta());
+      gps.textContent = mision.gpsTexto();
+      gps.classList.toggle('falta', !(mision.tiene('lat') && mision.tiene('lon')));
+      const estado = document.getElementById('estado-mision');
+      estado.classList.toggle('lista', mision.completa());
+      estado.textContent = mision.completa()
+        ? '¡Núcleo localizado! Anoten la IP y el GPS en su bitácora de papel y llévenlos al reto final.'
+        : mision.ipCompleta() ? 'IP completa. Ahora jueguen Robot programado para conseguir el GPS.'
+          : `Piezas: ${mision.cuantas()} de 6. Ganen la IP en los juegos 1, 2 y 3.`;
+    };
+    pintarBitacora();
+    document.addEventListener('codexia-pista', pintarBitacora);
+    document.getElementById('nuevo-equipo').addEventListener('click', () => {
+      if (confirm('¿Borrar la IP y el GPS de este visor para un equipo nuevo?')) mision.reiniciar();
+    });
+
+    // videos
+    const ventana = document.getElementById('ventana-video');
+    const video = document.getElementById('video');
+    const conVideo = window.MINIJUEGOS.filter((j) => j.video);
+    let actual = 0;
+    const ponerVideo = (i) => {
+      actual = (i + conVideo.length) % conVideo.length;
+      const j = conVideo[actual];
+      document.getElementById('video-titulo').textContent = j.titulo;
+      document.getElementById('video-area').textContent = `${j.area.toUpperCase()} · ${actual + 1} DE ${conVideo.length}`;
+      document.getElementById('video-jugar').href = j.archivo;
+      video.src = j.video;
+      video.play().catch(() => { /* el navegador pide tocar play */ });
+    };
+    const abrirVideo = (j) => {
+      if (!ventana.open) ventana.showModal();
+      ponerVideo(Math.max(0, conVideo.indexOf(j)));
+    };
+    document.getElementById('video-cerrar').addEventListener('click', () => ventana.close());
+    document.getElementById('video-anterior').addEventListener('click', () => ponerVideo(actual - 1));
+    document.getElementById('video-siguiente').addEventListener('click', () => ponerVideo(actual + 1));
+    document.getElementById('ver-videos').addEventListener('click', () => abrirVideo(conVideo[0]));
+    ventana.addEventListener('close', () => { video.pause(); video.removeAttribute('src'); video.load(); });
+    ventana.addEventListener('click', (e) => { if (e.target === ventana) ventana.close(); });
+    video.addEventListener('ended', () => { if (actual < conVideo.length - 1) ponerVideo(actual + 1); });
+
+    dibujarMenuWeb(document.getElementById('juegos'), abrirVideo);
+
+    // ajustes del visor: equipo y música
+    const cajaEquipos = document.getElementById('equipos');
+    const pintarEquipos = () => {
+      cajaEquipos.innerHTML = '';
+      for (let n = 1; n <= 8; n++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'boton chico';
+        b.textContent = n;
+        b.setAttribute('aria-pressed', String(marcador.equipo() === n));
+        b.setAttribute('aria-label', `Equipo ${n}`);
+        b.addEventListener('click', () => {
+          marcador.ponerEquipo(n);
+          pintarEquipos();
+          const menu3D = document.querySelector('[menu-juegos]').components['menu-juegos'];
+          if (menu3D) menu3D.botonesEquipo.forEach((x, i) => x.setAttribute('boton', 'elegido', i + 1 === n));
+        });
+        cajaEquipos.appendChild(b);
+      }
+    };
+    pintarEquipos();
+    document.addEventListener('enlace-equipo', pintarEquipos);
+    const botonMusica = document.getElementById('musica');
+    const pintarMusica = () => {
+      botonMusica.textContent = musica.encendida() ? 'Sí' : 'No';
+      botonMusica.setAttribute('aria-pressed', String(musica.encendida()));
+    };
+    pintarMusica();
+    document.addEventListener('enlace-musica', pintarMusica);
+    botonMusica.addEventListener('click', () => {
+      musica.ponerEncendida(!musica.encendida());
+      pintarMusica();
+      const menu3D = document.querySelector('[menu-juegos]').components['menu-juegos'];
+      if (menu3D) menu3D.botonMusica.setAttribute('boton', 'texto', musica.encendida() ? 'Música: sí' : 'Música: no');
+    });
+
+    // entrar y salir de VR
+    const escena = document.querySelector('a-scene');
+    const menuWeb = document.getElementById('menu-web');
+    const verWeb = document.getElementById('ver-web');
+    const mostrarMenuWeb = (si) => {
+      menuWeb.style.display = si ? 'flex' : 'none';
+      verWeb.style.display = si ? 'none' : 'block';
+    };
+    document.getElementById('entrar-vr').addEventListener('click', () => {
+      if (escena.hasLoaded) escena.enterVR(); else escena.addEventListener('loaded', () => escena.enterVR(), { once: true });
+      mostrarMenuWeb(false);
+    });
+    verWeb.addEventListener('click', () => mostrarMenuWeb(true));
+    escena.addEventListener('enter-vr', () => mostrarMenuWeb(false));
+    escena.addEventListener('exit-vr', () => mostrarMenuWeb(true));
+  </script>
+</body>
+</html>

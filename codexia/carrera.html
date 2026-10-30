@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<!-- CODEXIA · Ghost Network: edición del hackathon (ver ../codexia/LEEME.md) -->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CODEXIA · Carrera de palabras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/palabras.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/marcador.js"></script>
+  <script src="js/mision.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/ambientes.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/carrera.js"></script>
+  <style>
+    .ayuda-2d a { color: #FF1638; }
+    .ayuda-2d {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10;
+      font: 15px/1.4 "Rajdhani", "Segoe UI", system-ui, sans-serif; color: #e6e8eb;
+      background: rgba(6, 8, 13, .9); border: 1px solid rgba(255, 22, 56, .5); padding: 8px 12px; border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <a-scene background="color: #050405" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <!-- el mensaje viaja por la red: el escenario cambia con cada palabra correcta -->
+    <a-entity ambiente-viaje></a-entity>
+
+    <!-- jugador sentado: cámara y los dos controles con apuntador láser -->
+    <a-entity id="jugador">
+      <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #FF1638"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #FF1638"></a-entity>
+    </a-entity>
+
+    <!-- el panel del juego, frente al jugador -->
+    <a-entity id="juego" carrera-palabras position="0 1.3 -1.6"></a-entity>
+  </a-scene>
+
+  <div class="ayuda-2d">Modo 2D: haz clic en los botones o usa el teclado (letras, Retroceso = Borrar, Enter = Enviar). En el visor, toca "VR" abajo a la derecha. · <a href="index.html">Menú</a></div>
+</body>
+</html>

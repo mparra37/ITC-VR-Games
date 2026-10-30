@@ -94,3 +94,7 @@ python ../prototipo_papel/publicar_material.py
 - `videos/reel_*.mp4`: videos verticales de 15 s por juego (se ven desde el menú con **▶ Video** o **▶ Ver los videos**). Se regeneran con `node videos/grabar_reels.mjs` (Chrome sin ventana graba `videos/reel.html?juego=...`, que juega el juego real con un guion). Hay que volver a grabarlos cuando cambia cómo se ve un juego.
 
 El Laboratorio NOC-7 (escape room) se quitó del menú el 30 de octubre de 2026 para usarlo después con alumnos más avanzados; está en `../_archivo/noc7/`.
+
+## Edición CODEXIA
+
+`codexia/` es una copia con la identidad del hackathon CODEXIA (Ultrón, negro y rojo) para la estación 04 · Redes: 4 juegos (sin Programa al robot), pistas de la IP y el GPS de Ultrón y palabras del cuidado del agua. Se publica en `mparra37.github.io/ITC-VR-Games/codexia/` y no cambia nada de Enlace VR. Ver `codexia/LEEME.md`.
