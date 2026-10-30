@@ -8,12 +8,11 @@
 /* global AFRAME, COLOR, MONO, texto, rectRedondo, pintar, sonido, crearEntidad, refrescarApuntadores, dibujarLogo, marcador, musica */
 
 window.MINIJUEGOS = [
-  { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Lean la dirección IP de cada paquete y mándenlo por la puerta correcta.', nivel: 'Media', voltear: true },
-  { archivo: 'arma.html', area: 'Hardware', titulo: 'Arma la computadora', texto: 'Un rompecabezas: el equipo tiene el plano y guía dónde va cada pieza.', nivel: 'Fácil · 5 min', voltear: true },
-  { archivo: 'carrera.html', area: 'Binario y ASCII', titulo: 'Carrera de palabras', texto: 'Traduzcan palabras escritas en binario, letra por letra.', nivel: 'Media', voltear: false },
-  { archivo: 'robot.html', area: 'Algoritmos', titulo: 'Robot programado', texto: 'Sigan el programa paso a paso y digan dónde termina el robot.', nivel: 'Fácil', voltear: false },
-  { archivo: 'programa.html', area: 'Relevo · algoritmos', titulo: 'Programa al robot', texto: 'Cada quien arma su programa para llevar al robot a la meta. ¡Al lograrlo, pasa el visor!', nivel: 'Individual · 8 min', voltear: false },
-  { archivo: 'noc7.html', area: 'Escape room', titulo: 'Laboratorio NOC-7', texto: 'Cuatro salas de binario, ASCII y lógica. Resuelvan cada reto y jalen la palanca.', nivel: 'Media · 12 min', voltear: true },
+  { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Lean la dirección IP de cada paquete y mándenlo por la puerta correcta.', nivel: 'Media · 3 min', voltear: true, video: 'videos/reel_router.mp4' },
+  { archivo: 'arma.html', area: 'Hardware', titulo: 'Arma la computadora', texto: 'Un rompecabezas: el equipo tiene el plano y guía dónde va cada pieza.', nivel: 'Fácil · 5 min', voltear: true, video: 'videos/reel_arma.mp4' },
+  { archivo: 'carrera.html', area: 'Binario y ASCII', titulo: 'Carrera de palabras', texto: 'Traduzcan palabras escritas en binario. Con cada acierto, el mensaje viaja por la red.', nivel: 'Media · 3 min', voltear: false, video: 'videos/reel_carrera.mp4' },
+  { archivo: 'programa.html', area: 'Relevo · algoritmos', titulo: 'Programa al robot', texto: 'Cada quien arma su programa para llevar al robot a la meta. ¡Al lograrlo, pasa el visor!', nivel: 'Individual · 8 min', voltear: false, video: 'videos/reel_programa.mp4' },
+  { archivo: 'robot.html', area: 'Algoritmos · en equipo', titulo: 'Robot programado', texto: 'El equipo ve el mapa con los hoyos; el Operador no. Guíen al robot paso a paso con flechas.', nivel: 'Media · 5 min', voltear: false, video: 'videos/reel_robot.mp4' },
 ];
 
 /** Ir a un juego (o al menú). Si está en VR, el visor sale de la sesión y la nueva página vuelve a entrar. */
@@ -21,15 +20,18 @@ function irA(archivo) {
   window.location.href = archivo;
 }
 
-/** Tarjetas del menú web. */
-function dibujarMenuWeb(contenedor) {
+/** Tarjetas del menú web (con botón para ver el video de 15 s de cada juego). */
+function dibujarMenuWeb(contenedor, alVerVideo) {
   contenedor.innerHTML = window.MINIJUEGOS.map((j, i) => `
-    <a class="reto" href="${j.archivo}">
-      <span class="area"><b>${String(i + 1).padStart(2, '0')}</b> · ${j.area}</span>
-      <h2>${j.titulo}</h2>
-      <p>${j.texto}</p>
-      <span class="pie"><span>Dificultad: ${j.nivel}</span><span>${j.voltear ? 'Hay que voltear' : 'Todo enfrente'}</span></span>
-    </a>`).join('');
+    <div class="reto">
+      <a class="reto-enlace" href="${j.archivo}">
+        <span class="area"><b>${String(i + 1).padStart(2, '0')}</b> · ${j.area}</span>
+        <h2>${j.titulo}</h2>
+        <p>${j.texto}</p>
+      </a>
+      <span class="pie"><span>${j.nivel} · ${j.voltear ? 'hay que voltear' : 'todo enfrente'}</span>${j.video ? `<button type="button" class="ver-video" data-i="${i}" aria-label="Ver video de ${j.titulo}">▶ Video</button>` : ''}</span>
+    </div>`).join('');
+  contenedor.querySelectorAll('.ver-video').forEach((b) => b.addEventListener('click', () => alVerVideo(window.MINIJUEGOS[Number(b.dataset.i)])));
 }
 
 /** Menú 3D dentro del visor: un panel con una tarjeta por juego. */

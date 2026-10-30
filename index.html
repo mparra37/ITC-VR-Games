@@ -12,6 +12,7 @@
   <script src="js/config.js"></script>
   <script src="js/marcador.js"></script>
   <script src="js/comun.js"></script>
+  <script src="js/ambientes.js"></script>
   <script src="js/menu.js"></script>
   <style>
     :root {
@@ -44,17 +45,32 @@
     .boton.principal:hover, .boton.principal:focus-visible { background: #3B7FD3; }
     .titulo-seccion { width: 100%; max-width: 820px; display: flex; justify-content: space-between; color: var(--gris); font: 500 13px "IBM Plex Mono", monospace; margin-bottom: 12px; }
     .retos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; width: 100%; max-width: 820px; }
-    a.reto {
-      display: flex; flex-direction: column; text-decoration: none; color: inherit; min-height: 210px;
+    .reto {
+      display: flex; flex-direction: column; min-height: 210px;
       padding: 22px; border-radius: 14px; background: var(--panel); border: 1px solid var(--linea);
       transition: border-color .15s, transform .15s;
     }
-    a.reto:hover, a.reto:focus-visible { border-color: var(--acento); transform: translateY(-2px); outline: none; }
+    .reto:hover, .reto:focus-within { border-color: var(--acento); transform: translateY(-2px); }
+    .reto-enlace { display: flex; flex-direction: column; flex: 1; text-decoration: none; color: inherit; outline: none; }
+    .ver-video {
+      font: 600 14px "Space Grotesk", system-ui, sans-serif; cursor: pointer; flex: none;
+      color: var(--blanco); background: var(--acento-2); border: 0; border-radius: 8px; padding: 7px 12px;
+    }
+    .ver-video:hover, .ver-video:focus-visible { background: #3B7FD3; outline: 2px solid var(--acento); outline-offset: 2px; }
+    /* ventana del video (formato vertical 9:16) */
+    #ventana-video { border: 1px solid var(--linea); border-radius: 16px; padding: 0; background: var(--negro); color: var(--blanco); width: min(420px, calc(100vw - 32px)); }
+    #ventana-video::backdrop { background: rgba(3, 5, 9, .82); }
+    .video-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; }
+    .video-cabeza h3 { margin: 0; font-size: 18px; }
+    .video-cabeza span { display: block; font: 500 12px "IBM Plex Mono", monospace; color: var(--acento); }
+    #ventana-video video { display: block; width: 100%; aspect-ratio: 9 / 16; max-height: calc(100vh - 150px); background: #000; }
+    .video-pie { display: flex; justify-content: space-between; gap: 8px; padding: 10px 14px; }
+    .video-pie .boton, .video-cabeza .boton { padding: 8px 14px; font-size: 14px; }
     .area { font: 500 13px "IBM Plex Mono", monospace; color: var(--acento); }
     .area b { font-weight: 600; }
     .reto h2 { font-size: 24px; font-weight: 700; margin: 10px 0 8px; }
     .reto p { margin: 0 0 16px; color: var(--gris); line-height: 1.45; flex: 1; }
-    .pie { display: flex; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid var(--linea); color: var(--gris-2); font-size: 14px; }
+    .pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--linea); color: var(--gris-2); font-size: 14px; }
     .nota { margin-top: 32px; max-width: 820px; width: 100%; color: var(--gris); font-size: 16px; line-height: 1.55; border-left: 3px solid var(--acento-2); padding: 4px 16px; }
     .nota b { color: var(--blanco); font-weight: 600; }
     .nota a { color: var(--acento); }
@@ -73,9 +89,9 @@
   </style>
 </head>
 <body>
-  <!-- escena 3D: fondo de circuitos y el menú que se usa dentro del visor -->
+  <!-- escena 3D: sala de servidores y el menú que se usa dentro del visor -->
   <a-scene background="color: #06080D" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-    <a-entity ambiente-circuito></a-entity>
+    <a-entity ambiente-servidores></a-entity>
     <a-entity light="type: ambient; intensity: 0.8"></a-entity>
     <a-entity id="jugador">
       <a-entity camera position="0 1.2 0" look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-entity>
@@ -95,6 +111,7 @@
     <p class="sub">Retos de computación para jugar en equipo con realidad virtual. Un Operador usa el visor y ve el reto; el resto del equipo tiene el manual impreso y sabe cómo resolverlo. Solo hablando entre todos lo logran.</p>
     <div class="acciones">
       <button id="entrar-vr" class="boton principal" type="button">Entrar al menú en VR</button>
+      <button id="ver-videos" class="boton" type="button">▶ Ver los videos</button>
       <a class="boton" href="empezar.html">Cómo empezar</a>
       <a class="boton" href="material.html">Material para imprimir</a>
       <a class="boton" href="marcador.html">Marcador del profesor</a>
@@ -109,16 +126,57 @@
         <button id="musica" class="boton chico" type="button" aria-pressed="true">Sí</button>
       </div>
     </div>
-    <div class="titulo-seccion"><span>juegos · 6</span><span>rondas de 3 a 8 min · escape room de 12 min</span></div>
+    <div class="titulo-seccion"><span id="cuantos-juegos">juegos</span><span>rondas de 3 a 8 minutos</span></div>
     <div class="retos" id="juegos"></div>
     <p class="nota">Para el profesor: el instructivo, el Manual de campo, el marcador y todo lo que se imprime está en <a href="material.html">Material para imprimir</a>. En el visor, toca <b>Entrar al menú en VR</b> y elige el juego con el láser del control (gatillo). En cada juego, el botón <b>Menú de juegos</b> regresa aquí. Al final de cada ronda el visor da el puntaje y un <b>código</b>: el equipo anota los dos en su hoja y el profesor los verifica en el <a href="marcador.html">Marcador del profesor</a> (o llegan solos a Google Sheets, si está configurado). Antes de empezar, elijan arriba de qué equipo es cada visor. Se juega sentado y con la correa del control en la muñeca.</p>
   </div>
+
+  <!-- video de 15 s de cada juego -->
+  <dialog id="ventana-video" aria-labelledby="video-titulo">
+    <div class="video-cabeza">
+      <div><span id="video-area"></span><h3 id="video-titulo"></h3></div>
+      <button type="button" class="boton" id="video-cerrar" aria-label="Cerrar video">✕</button>
+    </div>
+    <video id="video" controls playsinline preload="metadata"></video>
+    <div class="video-pie">
+      <button type="button" class="boton" id="video-anterior">← Anterior</button>
+      <a class="boton" id="video-jugar" href="#">Jugar</a>
+      <button type="button" class="boton" id="video-siguiente">Siguiente →</button>
+    </div>
+  </dialog>
 
   <!-- en la computadora: regresar del menú 3D al menú web -->
   <button id="ver-web" type="button">← Menú web</button>
 
   <script>
-    dibujarMenuWeb(document.getElementById('juegos'));
+    // videos: una ventana con el reel de cada juego (anterior / siguiente para verlos todos)
+    const ventana = document.getElementById('ventana-video');
+    const video = document.getElementById('video');
+    const conVideo = window.MINIJUEGOS.filter((j) => j.video);
+    let actual = 0;
+    const ponerVideo = (i) => {
+      actual = (i + conVideo.length) % conVideo.length;
+      const j = conVideo[actual];
+      document.getElementById('video-titulo').textContent = j.titulo;
+      document.getElementById('video-area').textContent = `${j.area.toUpperCase()} · ${actual + 1} DE ${conVideo.length}`;
+      document.getElementById('video-jugar').href = j.archivo;
+      video.src = j.video;
+      video.play().catch(() => { /* el navegador pide tocar play */ });
+    };
+    const abrirVideo = (j) => {
+      if (!ventana.open) ventana.showModal();
+      ponerVideo(Math.max(0, conVideo.indexOf(j)));
+    };
+    document.getElementById('video-cerrar').addEventListener('click', () => ventana.close());
+    document.getElementById('video-anterior').addEventListener('click', () => ponerVideo(actual - 1));
+    document.getElementById('video-siguiente').addEventListener('click', () => ponerVideo(actual + 1));
+    document.getElementById('ver-videos').addEventListener('click', () => abrirVideo(conVideo[0]));
+    ventana.addEventListener('close', () => { video.pause(); video.removeAttribute('src'); video.load(); });
+    ventana.addEventListener('click', (e) => { if (e.target === ventana) ventana.close(); });
+    video.addEventListener('ended', () => { if (actual < conVideo.length - 1) ponerVideo(actual + 1); });
+
+    dibujarMenuWeb(document.getElementById('juegos'), abrirVideo);
+    document.getElementById('cuantos-juegos').textContent = `juegos · ${window.MINIJUEGOS.length}`;
     // ajustes de este visor: equipo y música (se guardan en el visor)
     const cajaEquipos = document.getElementById('equipos');
     const pintarEquipos = () => {

@@ -7,10 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="js/robot_programas.js"></script>
+  <script src="js/robot_mapas.js"></script>
   <script src="js/config.js"></script>
   <script src="js/marcador.js"></script>
   <script src="js/comun.js"></script>
+  <script src="js/ambientes.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/robot.js"></script>
   <style>
@@ -24,8 +25,8 @@
 </head>
 <body>
   <a-scene background="color: #06080D" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-    <!-- ciudad futurista, cielo con estrellas y partículas de datos -->
-    <a-entity ambiente-futurista></a-entity>
+    <!-- estación en órbita: la Tierra de noche, satélites y enlaces de luz -->
+    <a-entity ambiente-orbita></a-entity>
 
     <!-- luz para el robot y la mesa -->
     <a-entity light="type: ambient; color: #b9cdf0; intensity: 0.9"></a-entity>
@@ -39,10 +40,10 @@
       <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #5AA9FF"></a-entity>
     </a-entity>
 
-    <!-- el juego: panel de información y mesa con el tablero -->
+    <!-- el juego: pantalla grande, tablero de 5 x 5 y consola con flechas -->
     <a-entity id="juego" robot-programado></a-entity>
   </a-scene>
 
-  <div class="ayuda-2d">Modo 2D: haz clic en una casilla y en Enviar, o escribe la casilla (por ejemplo c2) y Enter. En el visor, toca "VR" abajo a la derecha. · <a href="index.html">Menú</a></div>
+  <div class="ayuda-2d">Modo 2D: haz clic en una flecha, en cuántas casillas y en Mover. Teclado: flechas, 1 a 4 y Enter. En el visor, toca "VR" abajo a la derecha. · <a href="index.html">Menú</a></div>
 </body>
 </html>

@@ -133,8 +133,8 @@
 </main>
 
 <script>
-  const JUEGOS = [1, 2, 3, 4, 6]; // las rondas cronometradas y el relevo (se suman en el total)
-  const NOC7 = 5;
+  const JUEGOS = [1, 2, 3, 6, 4]; // en el orden del menú (Programa al robot va antes que Robot programado)
+  const NOC7 = 5; // Laboratorio NOC-7 (archivado): sus códigos se siguen reconociendo, pero no tiene columna
   const deHoja = new Map(); // código → registro leído de la hoja
   const dePapel = new Map(); // código → registro verificado a mano
 
@@ -164,9 +164,9 @@
     }
     const lista = [...equipos.values()].sort((a, b) => b.total - a.total || a.equipo - b.equipo);
     const celda = (j) => (j ? `${j.suma}<span class="rondas">(${j.rondas})</span>` : '<span class="tenue">—</span>');
-    tabla.innerHTML = `<thead><tr><th>Equipo</th>${JUEGOS.map((j) => `<th>${esc(JUEGOS_MARCADOR[j])}</th>`).join('')}<th>Total</th><th>${esc(JUEGOS_MARCADOR[NOC7])}</th></tr></thead><tbody>${
+    tabla.innerHTML = `<thead><tr><th>Equipo</th>${JUEGOS.map((j) => `<th>${esc(JUEGOS_MARCADOR[j])}</th>`).join('')}<th>Total</th></tr></thead><tbody>${
       lista.map((e, i) => `<tr class="${i === 0 && e.total > 0 ? 'primero' : ''}"><td>${e.equipo ? `Equipo ${e.equipo}` : 'Sin equipo'}</td>${
-        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j])}</td>`).join('')}<td class="num total">${e.total}</td><td class="num">${celda(e.juegos[NOC7])}</td></tr>`).join('')}</tbody>`;
+        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j])}</td>`).join('')}<td class="num total">${e.total}</td></tr>`).join('')}</tbody>`;
   }
 
   // ---------- verificar códigos en papel ----------

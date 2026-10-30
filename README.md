@@ -20,7 +20,7 @@ Same rules in every game:
 
 | Rule | Value |
 | --- | --- |
-| Round length | 3 minutes (or untimed practice mode); Laboratorio NOC-7 is a ~12-minute escape room and Programa al robot an 8-minute individual relay |
+| Round length | 3 minutes (or untimed practice mode); 5 minutes for Arma la computadora and Robot programado; Programa al robot is an 8-minute individual relay |
 | Correct answer | +1 point |
 | Wrong answer or skip | 5-second lockout ("¡Enlace caído!", link down): nobody talks |
 | Levels | 3, getting harder as the team scores |
@@ -34,10 +34,11 @@ A class of about 25 students can share 6 headsets: teams play in sync, one Opera
 | --- | --- | --- | --- |
 | `router.html` | **Router humano** (Human Router) | Networks: IP addresses | A packet arrives with an IP address. Like an envelope, the first three numbers are the **network** (the street) and the last one is the **device** (the house number); the headset paints them in two colors. The Operator reads the network to the team, the team finds it in the routing table, and the Operator turns to find that door and fires the packet. After every answer the game shows why ("network 192.168.1 is in the table → SALÓN"). |
 | `arma.html` | **Arma la computadora** (Build the Computer) | Hardware | A guided puzzle. The Operator sees an empty motherboard with numbered slots (model A, B or C) and the missing parts floating around as **drawings without names**. They grab a part and describe it; the team recognizes it in the parts catalog, finds it on the assembled plan for that board, and says the slot number. When the board is complete, the computer "boots" and shows every part's name. |
-| `carrera.html` | **Carrera de palabras** (Word Race) | Binary and ASCII | A word in binary, one byte per letter; the team decodes it and the Operator types it. |
-| `robot.html` | **Robot programado** (Programmed Robot) | Algorithms | Follow a short program (forward, turn, repeat) on a 4 × 4 board and pick the square where the robot ends. |
+| `carrera.html` | **Carrera de palabras** (Word Race) | Binary and ASCII | A word in binary, one byte per letter; the team decodes it and the Operator types it. Every right answer is a "hop" for the message: the scenery changes from the inside of the computer to a data center, a connected city, a fiber-optic cable, the Internet and a satellite. |
 | `programa.html` | **Programa al robot** (Program the Robot) | Algorithms (individual relay) | Unlike the other games, this one is played **alone**: the player builds a program with blocks (forward, turn left, turn right and, from level 3, ×2 / ×3 repeat) to take the robot to the goal on a 5 × 5 board with boxes. Reaching the goal plays a loud fanfare ("¡SIGUIENTE!") the whole room hears, and the headset passes to the next teammate, who gets a harder puzzle. 90 seconds per turn, 8 minutes per team; score = puzzles solved. |
-| `noc7.html` | **Laboratorio NOC-7** (NOC-7 Lab) | Escape room: binary, ASCII, logic | A 4-room escape room (about 12 minutes per team, its own scoring). Room 1: an IP address in binary → type it in decimal. Room 2: spell a word in binary with 8 light bulbs (ASCII). Room 3: variables a, b, c in binary → decimal. Room 4: true or false with a, b, c. Each solved room lights a lever on the right; pulling it opens the door, fades to black and pauses so the team can switch Operators. Values are random every game, so teams can't copy each other. |
+| `robot.html` | **Robot programado** (Programmed Robot) | Algorithms, as a team (play it after Programa al robot) | The Operator sees a 5 × 5 board with the robot but **not the holes or the goal**; the team has the 12 maps printed in the Field Manual but doesn't know where the robot starts. The Operator says "Map 3, it starts at B5"; the team gives one instruction at a time, an arrow and a number of squares ("two up"). The robot moves square by square and the screen says **¡LISTO!** (done). Stepping on a hole or off the board sinks it: the full map is shown and the next map of that level begins. Touching the goal scores +1 and moves to the next level (6 levels, 2 maps each). 5-minute rounds. |
+
+Every game has its own tech setting, generated in code in `js/ambientes.js`: a data center (menu and Router humano), the inside of a computer (Arma la computadora), the Internet as a network of nodes (Programa al robot), a station in orbit with satellites (Robot programado), and the six-stop network trip of Carrera de palabras. Each game also has a 15-second vertical video, playable from the menu (**▶ Video**).
 
 ## Printable material
 
@@ -46,8 +47,8 @@ Everything needed to run a session is in the site itself: open **Material para i
 - **Guía rápida del profesor** (teacher's quick guide): preparation checklist, room setup, the headset hand-off ritual, a 60-minute session plan, scoring and troubleshooting. It applies to every game.
 - **Per game:** teacher guide, student rules, Field Manual for the decoders, answer key, scoreboard and play-order sheet, plus extra sheets some games need.
 - **Programa al robot:** teacher guide, scoreboard with turn order, and grid puzzles to practice on paper while waiting.
-- **Laboratorio NOC-7:** teacher guide, the support-team sheet (powers of 2, ASCII table and what to do in each room) and its own scoreboard.
-- **For playing without a headset:** Operator cards (Router, Word Race, Robot) and a cut-out paper puzzle (Build the Computer).
+- **Robot programado:** teacher guide, the Field Manual with a worked example and the 12 maps drawn (holes and goal), a blank board for playing without a headset, and the scoreboard.
+- **For playing without a headset:** Operator cards (Router, Word Race), a blank board (Robot) and a cut-out paper puzzle (Build the Computer).
 - Each game also has a **ZIP** with all its PDFs.
 
 All PDFs are letter size, in Spanish, and live in the `material/` folder. Print the *Arma la computadora* manual in color.
@@ -67,9 +68,8 @@ Then open `http://localhost:8090/`. Click and drag to look around. Keyboard shor
 | Router humano | `S` salón, `B` biblioteca, `I` internet, `V` servidores, `L` laboratorio, `X` basura |
 | Arma la computadora | click a part, then click its slot (or `1`–`8` for the slot) |
 | Carrera de palabras | letters, `Backspace`, `Enter` |
-| Robot programado | type the square (e.g. `c2`) + `Enter` |
+| Robot programado | arrow keys = direction, `1`–`4` = squares, `Enter` = move |
 | Programa al robot | `↑` forward, `←` / `→` turn, `2` / `3` repeat, `Backspace` delete, `Enter` run or start the next turn |
-| Laboratorio NOC-7 | digits, `Backspace`, `Enter`; `1`–`8` = bulbs; `V`/`F` = true/false; `R` = reset for the next team |
 
 If you don't see your changes after editing a file, reload the page: browsers often cache the old JavaScript.
 
@@ -108,8 +108,10 @@ When the page changes, the Quest Browser usually re-enters VR by itself. If it d
 | `material.html`, `material/` | The printable material page and its PDFs and ZIPs (**generated**) |
 | `*.html` + `js/<game>.js` | One page and one script per game |
 | `js/menu.js` | The list of games used by both menus: add a new game here |
-| `js/comun.js` | Shared pieces: colors and fonts of the identity, canvas text panels, buttons, sounds, environments, SVG drawing |
-| `js/router_datos.js`, `js/computadora_datos.js`, `js/palabras.js`, `js/robot_programas.js`, `js/noc7_datos.js`, `js/programa_datos.js`, `js/material_datos.js` | Game data and drawings (**generated**, don't edit by hand) |
+| `js/comun.js` | Shared pieces: colors and fonts of the identity, canvas text panels, buttons, sounds, music, SVG drawing |
+| `js/ambientes.js` | The backgrounds, all made in code: `circuito`, `servidores`, `futurista`, `fibra`, `red`, `orbita`, plus `ambiente-viaje` (switches between all six with a fade) |
+| `videos/` | The 15-second reels and the script that records them (`node videos/grabar_reels.mjs`) |
+| `js/router_datos.js`, `js/computadora_datos.js`, `js/palabras.js`, `js/programa_datos.js`, `js/robot_mapas.js`, `js/material_datos.js` | Game data and drawings (**generated**, don't edit by hand) |
 
 All text in the scenes is drawn on canvas textures, so Spanish accents render correctly in VR.
 
@@ -137,7 +139,7 @@ These are prototypes. So far they have been tested in desktop browsers (2D mode)
 
 ## Credits
 
-The cooperative format is inspired by *Keep Talking and Nobody Explodes*. *Laboratorio NOC-7* is based on an earlier escape-room prototype by the author.
+The cooperative format is inspired by *Keep Talking and Nobody Explodes*. The data-center background grew out of an earlier escape-room prototype by the author (*Laboratorio NOC-7*, now archived for more advanced groups).
 
 
 ## Scoring without taking the headset

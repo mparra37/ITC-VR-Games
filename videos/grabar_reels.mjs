@@ -1,7 +1,7 @@
 // Enlace VR · graba los reels de los juegos con Chrome sin ventana (sin instalar nada extra).
 //
 // Uso (con el sitio servido en http://localhost:8090, por ejemplo: python -m http.server 8090):
-//   node videos/grabar_reels.mjs                 → los 5 juegos
+//   node videos/grabar_reels.mjs                 → los 5 juegos (router, arma, carrera, programa, robot)
 //   node videos/grabar_reels.mjs router arma     → solo esos
 // Guarda videos/reel_<juego>.mp4 (o .webm si el Chrome no graba MP4).
 import { spawn } from 'node:child_process';
@@ -14,7 +14,7 @@ const AQUI = dirname(fileURLToPath(import.meta.url));
 const SITIO = process.env.SITIO || 'http://localhost:8090';
 const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PUERTO = 9333;
-const JUEGOS = process.argv.slice(2).length ? process.argv.slice(2) : ['router', 'arma', 'carrera', 'robot', 'noc7'];
+const JUEGOS = process.argv.slice(2).length ? process.argv.slice(2) : ['router', 'arma', 'carrera', 'programa', 'robot'];
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const perfil = mkdtempSync(join(tmpdir(), 'reel-chrome-'));

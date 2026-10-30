@@ -11,6 +11,7 @@
   <script src="js/config.js"></script>
   <script src="js/marcador.js"></script>
   <script src="js/comun.js"></script>
+  <script src="js/ambientes.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/carrera.js"></script>
   <style>
@@ -24,8 +25,8 @@
 </head>
 <body>
   <a-scene background="color: #070b18" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-    <!-- piso de cuadrícula neón -->
-    <a-entity cuadricula></a-entity>
+    <!-- el mensaje viaja por la red: el escenario cambia con cada palabra correcta -->
+    <a-entity ambiente-viaje></a-entity>
 
     <!-- jugador sentado: cámara y los dos controles con apuntador láser -->
     <a-entity id="jugador">

@@ -4,6 +4,8 @@
  * El equipo busca las letras en el Manual de campo y el Operador las escribe.
  * Ronda de 3 minutos, +1 por palabra, bloqueo de 5 segundos al fallar o saltar,
  * sube de nivel cada 5 palabras (3, 4 y 5 letras).
+ * El fondo es el viaje de un mensaje por la red (js/ambientes.js): con cada palabra correcta el mensaje
+ * da un salto y cambia el escenario (computadora → servidores → ciudad → fibra → Internet → satélite).
  *
  * Usa las piezas de comun.js (paneles, botones, sonidos).
  */
@@ -70,6 +72,8 @@ AFRAME.registerComponent('carrera-palabras', {
     // pantalla de juego
     const jue = this.pantallas.juego;
     this.lienzoBarra = this.crear(jue, { lienzo: 'ancho: 2; alto: 0.16', position: '0 0.66 0' });
+    // arriba del panel: por dónde va el mensaje (un escenario por salto)
+    this.lienzoViaje = this.crear(jue, { lienzo: 'ancho: 2.2; alto: 0.2', position: '0 0.93 0' });
     this.lienzoBytes = this.crear(jue, { lienzo: 'ancho: 2; alto: 0.7', position: '0 0.2 0' });
     this.lienzoMensaje = this.crear(jue, { lienzo: 'ancho: 2; alto: 0.1', position: '0 -0.23 0' });
     ['ABCDEFGHI', 'JKLMNOPQR', 'STUVWXYZ'].forEach((fila, i) => {
@@ -138,6 +142,8 @@ AFRAME.registerComponent('carrera-palabras', {
     this.saltadas = 0;
     this.nivel = 1;
     this.usadas = new Set();
+    this.salto = 0;
+    if (window.ambienteViaje) window.ambienteViaje.ir(0);
     this.bloqueoHasta = 0;
     this.mensaje = null;
     this.finRonda = performance.now() + CONFIG.segundosRonda * 1000;
@@ -178,7 +184,8 @@ AFRAME.registerComponent('carrera-palabras', {
     if (this.escrito === this.palabra) {
       this.puntaje += 1;
       const nivelNuevo = Math.min(CONFIG.nivelMaximo, 1 + Math.floor(this.puntaje / CONFIG.aciertosPorNivel));
-      if (nivelNuevo > this.nivel) {
+      const subio = nivelNuevo > this.nivel;
+      if (subio) {
         this.nivel = nivelNuevo;
         this.avisar(`¡Nivel ${this.nivel}! Ahora las palabras tienen ${this.nivel + 2} letras`, COLOR.acento);
         sonido.nivel();
@@ -188,11 +195,24 @@ AFRAME.registerComponent('carrera-palabras', {
       }
       this.nuevaPalabra();
       this.dibujarBarra();
+      this.avanzarViaje(subio);
     } else {
       this.errores += 1;
       this.escrito = '';
       this.bloquear('Incorrecto');
     }
+  },
+
+  /** El mensaje da un salto: cambia el escenario. Al llegar al satélite, empieza otro viaje. */
+  avanzarViaje(subioNivel) {
+    this.salto += 1;
+    const etapas = window.VIAJE || [];
+    const n = etapas.length ? this.salto % etapas.length : 0;
+    if (window.ambienteViaje) window.ambienteViaje.ir(n);
+    if (n === 0 && etapas.length && !subioNivel) {
+      this.avisar('¡Mensaje entregado! Sale otro mensaje desde tu computadora · +1', COLOR.bien);
+    }
+    this.dibujarViaje();
   },
 
   bloquear(motivo) {
@@ -246,6 +266,7 @@ AFRAME.registerComponent('carrera-palabras', {
   // --- dibujo ---
 
   dibujarTodo() {
+    this.dibujarViaje();
     this.dibujarBarra();
     this.dibujarBytes();
     this.dibujarMensaje();
@@ -278,6 +299,46 @@ AFRAME.registerComponent('carrera-palabras', {
         const restante = (this.finRonda - performance.now()) / 1000;
         texto(ctx, minutos(restante), w - 40, h / 2, { tam: 70, peso: 700, color: restante <= 30 ? COLOR.mal : COLOR.acento, alinear: 'right', fuente: MONO });
       }
+    });
+  },
+
+  /** Ruta del mensaje: un punto por escenario y el nombre del lugar donde va. */
+  dibujarViaje() {
+    const etapas = window.VIAJE || [];
+    if (!etapas.length) return;
+    const n = this.salto % etapas.length;
+    pintar(this.lienzoViaje, (ctx, w, h) => {
+      fondoPanel(ctx, w, h, 'rgba(12,22,40,.92)');
+      texto(ctx, `SALTO ${n + 1} DE ${etapas.length}`, 40, h * 0.32, { tam: 34, peso: 600, color: COLOR.acento, fuente: MONO });
+      texto(ctx, etapas[n].nombre, 40, h * 0.7, { tam: 58, peso: 700 });
+      // la ruta
+      const x0 = w * 0.5;
+      const x1 = w - 60;
+      const paso = (x1 - x0) / (etapas.length - 1);
+      ctx.strokeStyle = 'rgba(242,244,248,.2)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(x0, h * 0.42);
+      ctx.lineTo(x1, h * 0.42);
+      ctx.stroke();
+      ctx.strokeStyle = COLOR.acento;
+      ctx.beginPath();
+      ctx.moveTo(x0, h * 0.42);
+      ctx.lineTo(x0 + paso * n, h * 0.42);
+      ctx.stroke();
+      etapas.forEach((e, i) => {
+        const x = x0 + paso * i;
+        ctx.beginPath();
+        ctx.arc(x, h * 0.42, i === n ? 20 : 12, 0, Math.PI * 2);
+        ctx.fillStyle = i <= n ? COLOR.acento : '#1b2a44';
+        ctx.fill();
+        if (i === n) {
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = COLOR.texto;
+          ctx.stroke();
+        }
+      });
+      texto(ctx, etapas[n].detalle, x0 + (x1 - x0) / 2, h * 0.8, { tam: 34, color: COLOR.tenue, alinear: 'center' });
     });
   },
 

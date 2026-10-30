@@ -1,6 +1,6 @@
 /* Enlace VR · reels de cada juego (videos verticales cortos, 9:16)
  *
- * reel.html?juego=router|arma|carrera|robot|noc7 abre el juego real en un iframe, lo juega solo con un
+ * reel.html?juego=router|arma|carrera|programa|robot abre el juego real en un iframe, lo juega solo con un
  * guion (mueve la cámara, elige respuestas) y compone cada cuadro en un lienzo de 720 × 1280: título
  * arriba, la escena del juego en medio, y abajo el paso que se está explicando. En el paso del equipo
  * aparece una tarjeta "Manual del equipo". El lienzo y la música se graban con MediaRecorder (MP4 si el
@@ -36,16 +36,86 @@ function mirarA(p) {
 
 // ---------- guiones ----------
 
-const DIRS = ['arriba', 'a la derecha', 'abajo', 'a la izquierda'];
-const COLS = 'ABCD';
+const COLS = 'ABCDE';
 const casilla = (c, f) => `${COLS[c]}${f + 1}`;
+const NUMEROS = ['', 'Una', 'Dos', 'Tres', 'Cuatro'];
+const decir = ([flecha, k]) => `${NUMEROS[k]} ${flecha === 'izquierda' || flecha === 'derecha' ? `a la ${flecha}` : `hacia ${flecha}`}`;
 
-function describirPasos(pasos) {
-  return pasos.map((p) => {
-    if (typeof p !== 'string') return `Repite ${p.repite}: ${describirPasos(p.pasos).join(', ').toLowerCase()}`;
-    if (p[0] === 'A') return `Avanza ${p.slice(1)}`;
-    return p === 'D' ? 'Gira a la derecha' : 'Gira a la izquierda';
+/** Robot programado: instrucciones más cortas (flecha, casillas) desde el inicio hasta la meta. */
+function resolverMapa(w, mapa, inicio) {
+  const k = (x) => `${x.c},${x.f}`;
+  const previo = new Map([[k(inicio), null]]);
+  const cola = [inicio];
+  while (cola.length) {
+    const cel = cola.shift();
+    if (cel.c === mapa.meta.c && cel.f === mapa.meta.f) {
+      const pasos = [];
+      let x = cel;
+      while (previo.get(k(x))) {
+        const [antes, instr] = previo.get(k(x));
+        pasos.unshift(instr);
+        x = antes;
+      }
+      return pasos;
+    }
+    ['arriba', 'abajo', 'izquierda', 'derecha'].forEach((flecha) => {
+      for (let n = 1; n <= 4; n++) {
+        const r = w.seguirInstruccion(mapa, cel, flecha, n);
+        if (r.resultado === 'hoyo' || r.resultado === 'fuera') break;
+        const destino = r.camino[r.camino.length - 1];
+        if (!previo.has(k(destino))) {
+          previo.set(k(destino), [cel, [flecha, n]]);
+          cola.push(destino);
+        }
+        if (r.resultado === 'meta') break;
+      }
+    });
+  }
+  return null;
+}
+
+/** Tablero chico de papel con hoyos, meta, inicio y el camino (para la tarjeta del manual). */
+function dibujarMapaPapel(c, x, y, lado, mapa, inicio, pasos) {
+  const cel = lado / 5;
+  c.fillStyle = '#F7F9FC';
+  c.fillRect(x, y, lado, lado);
+  c.strokeStyle = '#9fb0c8';
+  c.lineWidth = 1.5;
+  for (let i = 1; i < 5; i++) {
+    c.beginPath(); c.moveTo(x + i * cel, y); c.lineTo(x + i * cel, y + lado); c.stroke();
+    c.beginPath(); c.moveTo(x, y + i * cel); c.lineTo(x + lado, y + i * cel); c.stroke();
+  }
+  c.strokeStyle = '#0B1F3A';
+  c.lineWidth = 3;
+  c.strokeRect(x, y, lado, lado);
+  const centro = (cc, ff) => [x + cel * (cc + 0.5), y + cel * (ff + 0.5)];
+  mapa.hoyos.forEach((kk) => {
+    const [cc, ff] = kk.split(',').map(Number);
+    const [px, py] = centro(cc, ff);
+    c.beginPath(); c.arc(px, py, cel * 0.34, 0, Math.PI * 2); c.fillStyle = '#111'; c.fill();
+    c.lineWidth = 3; c.strokeStyle = '#D93848'; c.stroke();
   });
+  const [mx, my] = centro(mapa.meta.c, mapa.meta.f);
+  c.beginPath(); c.arc(mx, my, cel * 0.36, 0, Math.PI * 2); c.fillStyle = '#E3F6EC'; c.fill();
+  c.lineWidth = 3; c.strokeStyle = '#1E9E6A'; c.stroke();
+  escribir(c, 'META', mx, my + 1, { tam: cel * 0.2, peso: 700, color: '#1E9E6A', alinear: 'center' });
+  // el camino que dicta el equipo
+  c.strokeStyle = '#2F6FBF';
+  c.lineWidth = 4;
+  c.setLineDash([8, 6]);
+  c.beginPath();
+  let pos = { ...inicio };
+  c.moveTo(...centro(pos.c, pos.f));
+  const mov = { arriba: [0, -1], abajo: [0, 1], izquierda: [-1, 0], derecha: [1, 0] };
+  pasos.forEach(([flecha, n]) => {
+    pos = { c: pos.c + mov[flecha][0] * n, f: pos.f + mov[flecha][1] * n };
+    c.lineTo(...centro(pos.c, pos.f));
+  });
+  c.stroke();
+  c.setLineDash([]);
+  const [ix, iy] = centro(inicio.c, inicio.f);
+  c.beginPath(); c.arc(ix, iy, cel * 0.3, 0, Math.PI * 2); c.fillStyle = '#2F6FBF'; c.fill();
+  escribir(c, 'R', ix, iy + 1, { tam: cel * 0.34, peso: 700, color: '#ffffff', alinear: 'center' });
 }
 
 const GUIONES = {
@@ -131,7 +201,7 @@ const GUIONES = {
     area: 'BINARIO Y ASCII · 3 MINUTOS',
     archivo: '../carrera.html',
     componente: 'carrera-palabras',
-    final: ['+1 por cada palabra', 'Rondas de 3 minutos'],
+    final: ['+1 por palabra: el mensaje viaja por la red', 'Rondas de 3 minutos'],
     preparar(j, w) {
       j.empezar('ronda');
       j.finRonda = w.performance.now() + 168000;
@@ -139,13 +209,14 @@ const GUIONES = {
     },
     pasos: (d) => [
       { t: 2.2, quien: 'OPERADOR', texto: 'Ve una palabra escrita en binario y dicta los ceros y unos' },
-      { t: 6.0, quien: 'EQUIPO', texto: `Traduce cada byte con su tabla ASCII: la palabra es ${d.palabra}` },
-      { t: 9.8, quien: 'OPERADOR', texto: 'Escribe la palabra y la envía' },
+      { t: 5.2, quien: 'EQUIPO', texto: `Traduce cada byte con su tabla ASCII: la palabra es ${d.palabra}` },
+      { t: 8.6, quien: 'OPERADOR', texto: 'La escribe, la envía… ¡y el mensaje salta al siguiente lugar de la red!' },
     ],
     eventos: (d, j) => {
-      const ev = [{ t: 0, cam: [0, -14] }];
-      d.palabra.split('').forEach((l, i) => ev.push({ t: 10.2 + i * 0.45, hacer: () => j.presionar('letra', l) }));
-      ev.push({ t: 10.4 + d.palabra.length * 0.45, hacer: () => { j.presionar('enviar'); sonido.bien(); }, exito: '+1' });
+      const ev = [{ t: 0, cam: [0, -6] }];
+      d.palabra.split('').forEach((l, i) => ev.push({ t: 8.8 + i * 0.4, hacer: () => j.presionar('letra', l) }));
+      ev.push({ t: 9.0 + d.palabra.length * 0.4, hacer: () => { j.presionar('enviar'); sonido.bien(); }, exito: '+1' });
+      ev.push({ t: 10.4 + d.palabra.length * 0.4, cam: [32, 4], seg: 2.0 });
       return ev;
     },
     manual(c, x, y, w, h, d) {
@@ -158,80 +229,83 @@ const GUIONES = {
     },
   },
 
-  robot: {
-    titulo: 'Robot programado',
-    area: 'ALGORITMOS · 3 MINUTOS',
-    archivo: '../robot.html',
-    componente: 'robot-programado',
-    final: ['+1 por cada programa resuelto', 'Rondas de 3 minutos'],
+  programa: {
+    titulo: 'Programa al robot',
+    area: 'RELEVO · 8 MINUTOS',
+    archivo: '../programa.html',
+    componente: 'programa-robot',
+    final: ['+1 por cada reto: cada quien juega su turno', 'Relevo de 8 minutos · empiecen con este'],
     preparar(j, w) {
       j.empezar('ronda');
-      j.finRonda = w.performance.now() + 168000;
-      const r = j.reto;
-      return {
-        id: r.programa.id,
-        pasos: describirPasos(r.programa.pasos),
-        inicio: casilla(r.inicio.c, r.inicio.f),
-        dir: DIRS[r.inicio.d],
-        final: r.final,
-        nombreFinal: casilla(r.final.c, r.final.f),
-      };
+      j.finRonda = w.performance.now() + 470000;
+      for (let i = 0; i < 40 && (j.reto.solucion.length < 3 || j.reto.solucion.length > 4); i++) j.nuevoTurno();
+      j.finTurno = w.performance.now() + 85000;
+      return { solucion: j.reto.solucion.slice() };
+    },
+    pasos: () => [
+      { t: 2.2, quien: 'OPERADOR', texto: 'Juega solo: ve el robot, las cajas y la meta verde' },
+      { t: 5.6, quien: 'OPERADOR', texto: 'Arma el programa con bloques: Avanza, Gira a la izquierda, Gira a la derecha' },
+      { t: 9.6, quien: 'OPERADOR', texto: 'Lo ejecuta y… ¡llegó! Suena "¡Siguiente!" y pasa el visor' },
+    ],
+    eventos: (d, j) => {
+      const ev = [{ t: 0, cam: [0, -10] }, { t: 5.4, cam: [0, -26], seg: 1.0 }];
+      d.solucion.forEach((b, i) => ev.push({ t: 6.6 + i * 0.6, hacer: () => j.presionar('bloque', b) }));
+      ev.push({ t: 7.0 + d.solucion.length * 0.6, cam: [0, -12], seg: 0.8 });
+      ev.push({ t: 9.8, hacer: () => j.presionar('ejecutar') });
+      ev.push({ t: 10.2 + d.solucion.length * 0.45, hacer: () => {}, exito: '+1' });
+      return ev;
+    },
+    manual() {},
+  },
+
+  robot: {
+    titulo: 'Robot programado',
+    area: 'ALGORITMOS · 5 MINUTOS',
+    archivo: '../robot.html',
+    componente: 'robot-programado',
+    final: ['+1 por cada meta · si pisa un hoyo, se hunde', 'Rondas de 5 minutos · después de Programa al robot'],
+    preparar(j, w) {
+      j.empezar('ronda');
+      j.finRonda = w.performance.now() + 290000;
+      // un inicio con 2 o 3 instrucciones, para que quepa en el video
+      let pasos = resolverMapa(w, j.mapa, j.inicio);
+      for (let i = 0; i < j.mapa.inicios.length && (pasos.length < 2 || pasos.length > 3); i++) {
+        j.inicio = j.mapa.inicios[i];
+        pasos = resolverMapa(w, j.mapa, j.inicio);
+      }
+      j.posicionRobot = { ...j.inicio };
+      j.marcaInicio.position.copy(j.posicion(j.inicio.c, j.inicio.f)).setY(0.012);
+      j.celdas.forEach((x) => x.mat.color.setHex(x.base));
+      j.colocarRobot(j.inicio, 0);
+      j.pintarPisada(j.inicio);
+      j.dibujarPantalla();
+      return { mapa: j.mapa, inicio: { ...j.inicio }, nombreInicio: casilla(j.inicio.c, j.inicio.f), pasos };
     },
     pasos: (d) => [
-      { t: 2.2, quien: 'OPERADOR', texto: `Dicta: programa ${d.id}, empieza en ${d.inicio} mirando ${d.dir}` },
-      { t: 6.0, quien: 'EQUIPO', texto: `Sigue el programa en su tablero de papel: termina en ${d.nombreFinal}` },
-      { t: 9.8, quien: 'OPERADOR', texto: 'Toca esa casilla, Enviar… y el robot recorre el camino' },
+      { t: 2.2, quien: 'OPERADOR', texto: `Ve al robot, pero no los hoyos. Dicta: "Mapa ${d.mapa.id}, empieza en ${d.nombreInicio}"` },
+      { t: 5.6, quien: 'EQUIPO', texto: `Tiene el mapa con los hoyos y lo guía: "${decir(d.pasos[0])}"` },
+      { t: 9.4, quien: 'OPERADOR', texto: 'Mueve el robot paso a paso y contesta "¡listo!"… hasta la meta' },
     ],
-    eventos: (d, j) => [
-      { t: 0, cam: [0, 4] },
-      { t: 9.9, cam: [0, -22], seg: 1.0 },
-      { t: 10.9, hacer: () => j.seleccionar(`${d.final.c},${d.final.f}`) },
-      { t: 11.6, hacer: () => { j.enviar(); sonido.bien(); }, exito: '+1' },
-    ],
+    eventos: (d, j) => {
+      const ev = [{ t: 0, cam: [0, -12] }];
+      const mover = ([flecha, n]) => () => { j.elegirFlecha(flecha); j.elegirCuantas(n); j.mover(); };
+      let t = 7.6;
+      d.pasos.forEach((instr, i) => {
+        ev.push({ t, hacer: mover(instr) });
+        const fin = t + instr[1] * 0.43 + 0.2;
+        if (i === d.pasos.length - 1) ev.push({ t: fin, hacer: () => {}, exito: '+1' });
+        t = i === 0 ? Math.max(10.0, fin + 0.6) : fin + 0.9;
+      });
+      return ev;
+    },
     manual(c, x, y, w, h, d) {
-      encabezadoManual(c, x, y, w, `PROGRAMA ${d.id}`);
-      d.pasos.slice(0, 4).forEach((p, i) => escribir(c, `${i + 1}. ${p}`, x + 40, y + 100 + i * 44, { tam: 28, peso: 500, color: '#0B1F3A' }));
-      escribir(c, `Desde ${d.inicio} → termina en ${d.nombreFinal}`, x + 40, y + h - 40, { tam: 28, peso: 700, color: '#2F6FBF' });
+      encabezadoManual(c, x, y, w, `MAPA ${d.mapa.id} · EMPIEZA EN ${d.nombreInicio}`);
+      dibujarMapaPapel(c, x + 30, y + 78, 200, d.mapa, d.inicio, d.pasos);
+      d.pasos.forEach((p, i) => escribir(c, `${i + 1}. "${decir(p)}"`, x + 260, y + 110 + i * 46, { tam: 28, peso: 600, color: '#0B1F3A', max: w - 290 }));
+      escribir(c, 'Hoyo: se hunde · META: llegó', x + 260, y + h - 34, { tam: 22, color: '#5E6B80' });
     },
   },
 
-  noc7: {
-    titulo: 'Laboratorio NOC-7',
-    area: 'ESCAPE ROOM · 12 MINUTOS',
-    archivo: '../noc7.html',
-    componente: 'noc7',
-    final: ['4 salas: binario, ASCII y lógica', 'Cambian de Operador en cada sala'],
-    preparar(j) {
-      j.empezar();
-      const valores = j.filas.map((f) => f.val);
-      return { valores, bits: valores[0].toString(2).padStart(8, '0') };
-    },
-    pasos: (d) => [
-      { t: 2.2, quien: 'OPERADOR', texto: 'Escape room: en la sala 1 ve una dirección IP escrita en binario' },
-      { t: 6.0, quien: 'EQUIPO', texto: `La convierte con su hoja: ${d.bits} = ${d.valores[0]}` },
-      { t: 9.8, quien: 'OPERADOR', texto: 'Escribe los números, jala la palanca… ¡y se abre la puerta!' },
-    ],
-    eventos: (d, j) => [
-      { t: 0, cam: [0, 4] },
-      { t: 10.0, hacer: () => { j.buffers = d.valores.map(String); j.pintarSala(); sonido.tecla(); } },
-      { t: 10.7, hacer: () => j.presionar('ok'), exito: '+400' },
-      { t: 11.2, cam: [-58, 2], seg: 1.2 },
-      { t: 12.6, hacer: () => { j.jalarPalanca(); sonido.nivel(); } },
-    ],
-    manual(c, x, y, w, h, d) {
-      encabezadoManual(c, x, y, w, 'HOJA DE SOPORTE · POTENCIAS DE 2');
-      const pot = [128, 64, 32, 16, 8, 4, 2, 1];
-      const paso = (w - 60) / 8;
-      pot.forEach((p, i) => {
-        const cx = x + 30 + paso * i + paso / 2;
-        const on = d.bits[i] === '1';
-        escribir(c, String(p), cx, y + 110, { tam: 24, peso: 600, color: on ? '#2F6FBF' : '#8B95A7', alinear: 'center', fuente: MONO });
-        escribir(c, d.bits[i], cx, y + 160, { tam: 34, peso: 700, color: '#0B1F3A', alinear: 'center', fuente: MONO });
-      });
-      const suma = pot.filter((_, i) => d.bits[i] === '1').join(' + ');
-      escribir(c, `${suma} = ${d.valores[0]}`, x + w / 2, y + h - 40, { tam: 28, peso: 700, color: '#2F6FBF', alinear: 'center' });
-    },
-  },
 };
 
 // ---------- dibujo ----------

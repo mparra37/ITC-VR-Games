@@ -7,7 +7,7 @@ window.MATERIAL = {
   "visor": true,
   "archivo": "material/guia_general/00_Guia_rapida_del_profesor.pdf",
   "paginas": 4,
-  "kb": 124
+  "kb": 125
  },
  "juegos": [
   {
@@ -15,7 +15,7 @@ window.MATERIAL = {
    "tema": "Redes · direcciones IP",
    "pagina": "router.html",
    "zip": "material/router_humano/router_humano_material.zip",
-   "zip_kb": 529,
+   "zip_kb": 530,
    "archivos": [
     {
      "titulo": "Instructivo del profesor",
@@ -37,7 +37,7 @@ window.MATERIAL = {
     },
     {
      "titulo": "Manual de campo",
-     "para_que": "Lo que usan los decodificadores para resolver los retos",
+     "para_que": "Lo que usa el equipo para resolver los retos (en Robot programado: los mapas)",
      "cuantos": "1 por cada 2 decodificadores",
      "visor": true,
      "archivo": "material/router_humano/03_Manual_de_campo.pdf",
@@ -69,7 +69,7 @@ window.MATERIAL = {
    "tema": "Hardware · rompecabezas",
    "pagina": "arma.html",
    "zip": "material/arma_computadora/arma_computadora_material.zip",
-   "zip_kb": 564,
+   "zip_kb": 565,
    "archivos": [
     {
      "titulo": "Instructivo del profesor",
@@ -91,7 +91,7 @@ window.MATERIAL = {
     },
     {
      "titulo": "Manual de campo",
-     "para_que": "Lo que usan los decodificadores para resolver los retos",
+     "para_que": "Lo que usa el equipo para resolver los retos (en Robot programado: los mapas)",
      "cuantos": "1 por cada 2 decodificadores",
      "visor": true,
      "archivo": "material/arma_computadora/03_Manual_de_campo.pdf",
@@ -123,7 +123,7 @@ window.MATERIAL = {
    "tema": "Binario y ASCII",
    "pagina": "carrera.html",
    "zip": "material/carrera_de_palabras/carrera_de_palabras_material.zip",
-   "zip_kb": 521,
+   "zip_kb": 523,
    "archivos": [
     {
      "titulo": "Instructivo del profesor",
@@ -145,7 +145,7 @@ window.MATERIAL = {
     },
     {
      "titulo": "Manual de campo",
-     "para_que": "Lo que usan los decodificadores para resolver los retos",
+     "para_que": "Lo que usa el equipo para resolver los retos (en Robot programado: los mapas)",
      "cuantos": "1 por cada 2 decodificadores",
      "visor": true,
      "archivo": "material/carrera_de_palabras/03_Manual_de_campo.pdf",
@@ -173,74 +173,11 @@ window.MATERIAL = {
    ]
   },
   {
-   "nombre": "Robot programado",
-   "tema": "Algoritmos",
-   "pagina": "robot.html",
-   "zip": "material/robot_programado/robot_programado_material.zip",
-   "zip_kb": 569,
-   "archivos": [
-    {
-     "titulo": "Instructivo del profesor",
-     "para_que": "Cómo se juega, qué aprenden y preguntas de reflexión",
-     "cuantos": "1",
-     "visor": true,
-     "archivo": "material/robot_programado/01_Instructivo_del_profesor.pdf",
-     "paginas": 2,
-     "kb": 93
-    },
-    {
-     "titulo": "Reglas para alumnos",
-     "para_que": "Resumen de las reglas",
-     "cuantos": "1 por equipo (o proyectarlas)",
-     "visor": true,
-     "archivo": "material/robot_programado/02_Reglas_para_alumnos.pdf",
-     "paginas": 1,
-     "kb": 49
-    },
-    {
-     "titulo": "Manual de campo",
-     "para_que": "Lo que usan los decodificadores para resolver los retos",
-     "cuantos": "1 por cada 2 decodificadores",
-     "visor": true,
-     "archivo": "material/robot_programado/03_Manual_de_campo.pdf",
-     "paginas": 3,
-     "kb": 97
-    },
-    {
-     "titulo": "Tablero y fichas",
-     "para_que": "Tablero 4 × 4 y ficha del robot",
-     "cuantos": "1 por cada 2 decodificadores",
-     "visor": true,
-     "archivo": "material/robot_programado/04_Tablero_y_fichas.pdf",
-     "paginas": 1,
-     "kb": 40
-    },
-    {
-     "titulo": "Tarjetas del Operador",
-     "para_que": "Retos impresos para jugar sin visor (versión en papel)",
-     "cuantos": "1 juego por equipo, recortado",
-     "visor": false,
-     "archivo": "material/robot_programado/05_Tarjetas_del_Operador.pdf",
-     "paginas": 9,
-     "kb": 430
-    },
-    {
-     "titulo": "Respuestas y hojas",
-     "para_que": "Clave del juez, marcador, orden de juego y hoja de observación",
-     "cuantos": "1 juego",
-     "visor": true,
-     "archivo": "material/robot_programado/06_Respuestas_y_hojas.pdf",
-     "paginas": 4,
-     "kb": 176
-    }
-   ]
-  },
-  {
    "nombre": "Programa al robot",
-   "tema": "Relevo individual · algoritmos",
+   "tema": "Relevo individual · algoritmos (primero este)",
    "pagina": "programa.html",
    "zip": "material/programa_robot/programa_robot_material.zip",
-   "zip_kb": 273,
+   "zip_kb": 274,
    "archivos": [
     {
      "titulo": "Instructivo del profesor",
@@ -272,38 +209,47 @@ window.MATERIAL = {
    ]
   },
   {
-   "nombre": "Laboratorio NOC-7",
-   "tema": "Escape room · binario, ASCII y lógica",
-   "pagina": "noc7.html",
-   "zip": "material/noc7_laboratorio/noc7_laboratorio_material.zip",
-   "zip_kb": 268,
+   "nombre": "Robot programado",
+   "tema": "Algoritmos en equipo · mapa con hoyos",
+   "pagina": "robot.html",
+   "zip": "material/robot_programado/robot_programado_material.zip",
+   "zip_kb": 422,
    "archivos": [
     {
      "titulo": "Instructivo del profesor",
      "para_que": "Cómo se juega, qué aprenden y preguntas de reflexión",
      "cuantos": "1",
      "visor": true,
-     "archivo": "material/noc7_laboratorio/01_Instructivo_del_profesor.pdf",
+     "archivo": "material/robot_programado/01_Instructivo_del_profesor.pdf",
      "paginas": 2,
-     "kb": 59
+     "kb": 89
     },
     {
-     "titulo": "Hoja del equipo de soporte",
-     "para_que": "Tablas de binario y ASCII, y qué hacer en cada sala",
-     "cuantos": "1 por equipo (mejor 2)",
+     "titulo": "Manual de campo",
+     "para_que": "Lo que usa el equipo para resolver los retos (en Robot programado: los mapas)",
+     "cuantos": "1 por cada 2 decodificadores",
      "visor": true,
-     "archivo": "material/noc7_laboratorio/02_Hoja_del_equipo_de_soporte.pdf",
-     "paginas": 2,
-     "kb": 136
+     "archivo": "material/robot_programado/02_Manual_de_campo.pdf",
+     "paginas": 4,
+     "kb": 258
+    },
+    {
+     "titulo": "Tablero sin visor",
+     "para_que": "Tablero vacío y fichas para el Operador (versión en papel)",
+     "cuantos": "1 por equipo",
+     "visor": false,
+     "archivo": "material/robot_programado/03_Tablero_sin_visor.pdf",
+     "paginas": 1,
+     "kb": 54
     },
     {
      "titulo": "Marcador y hojas",
-     "para_que": "Marcador del escape room, orden de Operadores por sala y hoja de observación",
+     "para_que": "Marcador, orden de juego y hoja de observación",
      "cuantos": "1",
      "visor": true,
-     "archivo": "material/noc7_laboratorio/03_Marcador_y_hojas.pdf",
+     "archivo": "material/robot_programado/04_Marcador_y_hojas.pdf",
      "paginas": 3,
-     "kb": 66
+     "kb": 93
     }
    ]
   }

@@ -11,6 +11,7 @@
   <script src="js/marcador.js"></script>
   <script src="js/router_datos.js"></script>
   <script src="js/comun.js"></script>
+  <script src="js/ambientes.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/router_cuartos.js"></script>
   <script src="js/router.js"></script>
@@ -25,8 +26,8 @@
 </head>
 <body>
   <a-scene background="color: #06080D" renderer="antialias: true" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-    <!-- dentro de la computadora: circuitos, chips y pulsos de datos -->
-    <a-entity ambiente-circuito></a-entity>
+    <!-- sala de servidores: racks con luces, charolas de cables y la pantalla de la red -->
+    <a-entity ambiente-servidores></a-entity>
 
     <!-- luz -->
     <a-entity light="type: ambient; color: #b9cdf0; intensity: 0.9"></a-entity>

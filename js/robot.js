@@ -1,550 +1,657 @@
-/* Enlace VR · Robot programado
+/* Enlace VR · Robot programado (el equipo guía al robot paso a paso)
  *
- * El Operador ve un tablero de 4 x 4 con un robot, el número de programa,
- * la casilla de inicio y hacia dónde mira el robot. Los decodificadores tienen
- * los programas en el Manual de campo, los siguen en su tablero de papel y
- * gritan en qué casilla termina. El Operador toca esa casilla y presiona Enviar.
+ * El Operador ve un tablero de 5 × 5 con el robot, pero NO ve los hoyos ni la meta.
+ * El equipo tiene el mapa impreso (Manual de campo) con los hoyos y la meta, pero NO sabe dónde
+ * empieza el robot: el Operador les dice el número de mapa y la casilla de inicio.
  *
- * Ronda de 3 minutos, +1 por acierto, bloqueo de 5 segundos al fallar o saltar,
- * sube de nivel cada 5 aciertos (nivel 3 = programas con "Repite").
- * Al acertar, el robot recorre el programa en el tablero para que todos vean por qué.
+ * Luego el equipo dicta una instrucción a la vez: una flecha y cuántas casillas ("dos hacia arriba").
+ * El Operador elige la flecha y el número, presiona Mover y el robot avanza casilla por casilla.
+ * Si llega bien: "¡LISTO!" y el equipo dicta la siguiente. Si pisa un hoyo (o se sale del tablero)
+ * se hunde y termina esa jugada: se ve el mapa completo y sigue otro mapa del mismo nivel.
+ * Si toca la meta: "¡LLEGASTE!", +1 y pasa al siguiente nivel (más hoyos, caminos más largos).
+ *
+ * Ronda de 5 minutos. Puntaje = metas alcanzadas.
+ * Datos: js/robot_mapas.js (lo genera prototipo_papel/generar_robot.py a partir de robot_mapas.json).
  */
-/* global AFRAME, THREE, COLOR, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, marcador, rondaComun, dibujarFinalRonda */
+/* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, irA, marcador, rondaComun, dibujarFinalRonda */
 
-const CONFIG = {
-  segundosRonda: 180,
-  segundosBloqueo: 5,
-  aciertosPorNivel: 5,
-  nivelMaximo: 3,
-  casilla: 0.17, // metros
-  msPorPaso: 230,
+const ROBOT = {
+  celda: 0.32,
+  tablero: { x: 0, y: 0.75, z: -2.2, inclinacion: 0.3 },
+  msPaso: 430,
 };
 
-// fila 1 = ARRIBA (lejos del jugador), columna A = izquierda
-const DIRECCIONES = [
-  { nombre: 'arriba', flecha: '↑', dc: 0, df: -1 },
-  { nombre: 'la derecha', flecha: '→', dc: 1, df: 0 },
-  { nombre: 'abajo', flecha: '↓', dc: 0, df: 1 },
-  { nombre: 'la izquierda', flecha: '←', dc: -1, df: 0 },
-];
-const COLUMNAS = 'ABCD';
+const COLUMNAS = 'ABCDE';
+// "arriba" es la fila 1, el lado del tablero más lejos del jugador
+const FLECHAS = {
+  arriba: { icono: '↑', dc: 0, df: -1, nombre: 'arriba', giro: 0 },
+  derecha: { icono: '→', dc: 1, df: 0, nombre: 'a la derecha', giro: 1 },
+  abajo: { icono: '↓', dc: 0, df: 1, nombre: 'abajo', giro: 2 },
+  izquierda: { icono: '←', dc: -1, df: 0, nombre: 'a la izquierda', giro: 3 },
+};
 const nombreCasilla = (c, f) => `${COLUMNAS[c]}${f + 1}`;
+const clave = (c, f) => `${c},${f}`;
 
-// ---------- lógica del robot (igual que en generar_robot.py) ----------
-
-/** Convierte los pasos del programa en acciones sueltas: 'A' (avanza 1), 'D' o 'I'. */
-function expandir(pasos) {
-  const acciones = [];
-  pasos.forEach((p) => {
-    if (typeof p === 'string') {
-      if (p[0] === 'A') for (let i = 0; i < Number(p.slice(1)); i++) acciones.push('A');
-      else acciones.push(p);
-    } else {
-      for (let i = 0; i < p.repite; i++) acciones.push(...expandir(p.pasos));
-    }
+/** Convierte un mapa del JSON (filas de texto) en hoyos, meta e inicios. */
+function leerMapa(m) {
+  const hoyos = new Set();
+  let meta = null;
+  m.filas.forEach((fila, f) => {
+    [...fila].forEach((x, c) => {
+      if (x === 'O') hoyos.add(clave(c, f));
+      if (x === 'M') meta = { c, f };
+    });
   });
-  return acciones;
+  const inicios = m.inicios.map((t) => ({ c: COLUMNAS.indexOf(t[0]), f: Number(t.slice(1)) - 1 }));
+  return { id: m.id, nivel: m.nivel, hoyos, meta, inicios, n: m.filas.length };
 }
 
-/** Sigue el programa desde el inicio. Si va a chocar con la orilla, se queda en su lugar. */
-function simular(pasos, inicio) {
-  let { c, f, d } = inicio;
-  const estados = [{ c, f, d }];
-  let bloqueados = 0;
-  expandir(pasos).forEach((accion) => {
-    if (accion === 'A') {
-      const nc = c + DIRECCIONES[d].dc;
-      const nf = f + DIRECCIONES[d].df;
-      if (nc >= 0 && nc < 4 && nf >= 0 && nf < 4) { c = nc; f = nf; } else bloqueados += 1;
-    } else if (accion === 'D') {
-      d = (d + 1) % 4;
-    } else if (accion === 'I') {
-      d = (d + 3) % 4;
-    }
-    estados.push({ c, f, d });
-  });
-  return { estados, final: { c, f, d }, bloqueados };
-}
-
-/** Un reto al azar del nivel: programa + casilla de inicio + dirección. */
-function generarReto(nivel, anterior) {
-  const programas = window.ROBOT_PROGRAMAS.filter((p) => p.nivel === nivel);
-  const azar = (n) => Math.floor(Math.random() * n);
-  for (let intento = 0; intento < 500; intento++) {
-    const programa = programas[azar(programas.length)];
-    const inicio = { c: azar(4), f: azar(4), d: azar(4) };
-    const r = simular(programa.pasos, inicio);
-    const maxChoques = nivel === 1 ? 0 : 1;
-    const seMovio = r.final.c !== inicio.c || r.final.f !== inicio.f;
-    const repetido = anterior && anterior.programa.id === programa.id;
-    if (r.bloqueados <= maxChoques && (seMovio || nivel > 1) && !repetido) {
-      return { programa, inicio, final: r.final, estados: r.estados };
-    }
+/** Sigue una instrucción desde (c, f): lista de casillas que pisa y cómo termina. */
+function seguirInstruccion(mapa, desde, flecha, cuantas) {
+  const d = FLECHAS[flecha];
+  let { c, f } = desde;
+  const camino = [];
+  for (let k = 0; k < cuantas; k++) {
+    c += d.dc;
+    f += d.df;
+    camino.push({ c, f });
+    if (c < 0 || f < 0 || c >= mapa.n || f >= mapa.n) return { camino, resultado: 'fuera' };
+    if (mapa.hoyos.has(clave(c, f))) return { camino, resultado: 'hoyo' };
+    if (c === mapa.meta.c && f === mapa.meta.f) return { camino, resultado: 'meta' };
   }
-  const programa = programas[0];
-  const inicio = { c: 1, f: 3, d: 0 };
-  const r = simular(programa.pasos, inicio);
-  return { programa, inicio, final: r.final, estados: r.estados };
+  return { camino, resultado: 'bien' };
 }
 
-// ---------- el robot en 3D ----------
+// ---------- modelos 3D ----------
 
 function crearRobot() {
   const robot = new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({ color: 0xdfe7ff, metalness: 0.4, roughness: 0.35 });
   const oscuro = new THREE.MeshStandardMaterial({ color: 0x1b2a55, metalness: 0.5, roughness: 0.5 });
-  const brilloCian = new THREE.MeshBasicMaterial({ color: 0x5aa9ff });
-  const brilloMagenta = new THREE.MeshBasicMaterial({ color: 0xe6e8eb });
-
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.016, 28), oscuro);
-  base.position.y = 0.008;
-  const cuerpo = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.062, 0.06), metal);
-  cuerpo.position.y = 0.05;
-  const pecho = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.016), brilloMagenta);
-  pecho.position.set(0, 0.052, -0.0305);
-  pecho.rotation.y = Math.PI;
-  const cabeza = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.046, 0.052), metal);
-  cabeza.position.y = 0.106;
-  const visor = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.017), brilloCian);
-  visor.position.set(0, 0.109, -0.0265);
-  visor.rotation.y = Math.PI; // el frente del robot mira hacia -z
-  const antena = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.03, 8), oscuro);
-  antena.position.y = 0.144;
-  const bola = new THREE.Mesh(new THREE.SphereGeometry(0.009, 12, 10), brilloMagenta);
-  bola.position.y = 0.162;
-  // flecha en el piso que marca hacia dónde mira
-  const forma = new THREE.Shape();
-  forma.moveTo(0, -0.03);
-  forma.lineTo(0.022, 0);
-  forma.lineTo(-0.022, 0);
-  forma.closePath();
-  const flecha = new THREE.Mesh(new THREE.ShapeGeometry(forma), brilloCian);
-  flecha.rotation.x = -Math.PI / 2;
-  flecha.position.set(0, 0.017, -0.06);
-  robot.add(base, cuerpo, pecho, cabeza, visor, antena, bola, flecha);
+  const brillo = new THREE.MeshBasicMaterial({ color: 0x5aa9ff });
+  const caja = (w, h, p, mat, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, p), mat); m.position.y = y; return m; };
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.026, 28), oscuro);
+  base.position.y = 0.013;
+  const cuerpo = caja(0.145, 0.12, 0.11, metal, 0.095);
+  const cabeza = caja(0.12, 0.085, 0.1, metal, 0.205);
+  const visor = new THREE.Mesh(new THREE.PlaneGeometry(0.094, 0.03), brillo);
+  visor.position.set(0, 0.21, -0.0515);
+  visor.rotation.y = Math.PI;
+  const antena = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.06, 8), oscuro);
+  antena.position.y = 0.278;
+  const bola = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 10), brillo);
+  bola.position.y = 0.313;
+  robot.add(base, cuerpo, cabeza, visor, antena, bola);
   robot.userData.bola = bola;
   return robot;
+}
+
+/** Placa del tablero: casillas, letras, números y los cuatro lados (ARRIBA, ABAJO...). */
+function texturaPlaca(n, celda, margen) {
+  const lado = n * celda + margen * 2;
+  const px = 2048;
+  const k = px / lado; // pixeles por metro
+  const canvas = document.createElement('canvas');
+  canvas.width = px;
+  canvas.height = px;
+  const c = canvas.getContext('2d');
+  c.fillStyle = '#0b1424';
+  c.fillRect(0, 0, px, px);
+  c.strokeStyle = 'rgba(90,169,255,.55)';
+  c.lineWidth = 6;
+  c.strokeRect(10, 10, px - 20, px - 20);
+  const x0 = margen * k;
+  const tam = celda * k;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = '#5AA9FF';
+  c.font = `700 ${Math.round(tam * 0.36)}px "Space Grotesk", sans-serif`;
+  for (let i = 0; i < n; i++) {
+    const centro = x0 + tam * (i + 0.5);
+    c.fillText(COLUMNAS[i], centro, x0 - tam * 0.26);
+    c.fillText(COLUMNAS[i], centro, x0 + n * tam + tam * 0.26);
+    c.fillText(String(i + 1), x0 - tam * 0.26, centro);
+    c.fillText(String(i + 1), x0 + n * tam + tam * 0.26, centro);
+  }
+  // los cuatro lados, para que todos digan lo mismo
+  c.fillStyle = '#F2F4F8';
+  c.font = `700 ${Math.round(tam * 0.22)}px "Space Grotesk", sans-serif`;
+  c.fillText('↑ ARRIBA', px / 2, x0 - tam * 0.62);
+  c.fillText('↓ ABAJO', px / 2, x0 + n * tam + tam * 0.62);
+  c.save();
+  c.translate(x0 - tam * 0.62, px / 2);
+  c.rotate(-Math.PI / 2);
+  c.fillText('← IZQUIERDA', 0, 0);
+  c.restore();
+  c.save();
+  c.translate(x0 + n * tam + tam * 0.62, px / 2);
+  c.rotate(Math.PI / 2);
+  c.fillText('DERECHA →', 0, 0);
+  c.restore();
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return { tex, lado };
 }
 
 // ---------- el juego ----------
 
 AFRAME.registerComponent('robot-programado', {
   init() {
-    this.pantalla = '';
-    this.pantallas = {};
+    this.datos = window.ROBOT_MAPAS;
+    this.mapas = this.datos.mapas.map(leerMapa);
+    this.nivelMax = Math.max(...this.mapas.map((m) => m.nivel));
+    this.estado = 'inicio';
+    this.modo = 'practica';
     this.botones = { inicio: [], juego: [], fin: [] };
+    this.flecha = null;
+    this.cuantas = null;
     this.ultimoSegundo = null;
-    this.reto = null;
-    this.seleccion = null;
-    this.animacion = null;
-    this.nivel = 1;
-    this.construirEscena();
+    this.construir();
     this.el.sceneEl.addEventListener('boton-presionado', (e) => this.presionar(e.detail.accion, e.detail.valor));
     window.addEventListener('keydown', (e) => this.teclaFisica(e));
-    this.reto = generarReto(1, null);
-    this.colocarRobot(this.reto.inicio);
+    // en la computadora, mirar un poco hacia abajo para ver el tablero y la consola
+    this.el.sceneEl.addEventListener('loaded', () => {
+      const lc = document.querySelector('[camera]').components['look-controls'];
+      if (lc && !this.el.sceneEl.is('vr-mode')) lc.pitchObject.rotation.x = -0.3;
+    });
+    // en la pantalla de inicio se ve un mapa de ejemplo (sin hoyos)
+    this.mapa = this.mapas[0];
+    this.posicionRobot = this.mapa.inicios[0];
+    this.colocarRobot(this.posicionRobot, 0);
     this.mostrar('inicio');
     window.juego = this; // para probar desde la consola
   },
 
   // --- construcción ---
 
-  crearBoton(pantalla, padre, texto, posicion, opciones, rotacion = '0 0 0') {
-    const el = crearEntidad(padre, { position: posicion, rotation: rotacion, boton: Object.assign({ texto }, opciones) });
-    this.botones[pantalla].push(el);
-    return el;
-  },
+  construir() {
+    const T = ROBOT.tablero;
+    const n = this.datos.tablero;
+    const S = ROBOT.celda;
+    this.tablero = new THREE.Group();
+    this.tablero.position.set(T.x, T.y, T.z);
+    this.tablero.rotation.x = T.inclinacion;
+    this.el.object3D.add(this.tablero);
 
-  construirEscena() {
-    const S = CONFIG.casilla;
+    const { tex, lado } = texturaPlaca(n, S, 0.3);
+    const mesa = new THREE.Mesh(new THREE.BoxGeometry(lado, 0.05, lado), [
+      ...Array(2).fill(new THREE.MeshStandardMaterial({ color: 0x16233a })),
+      new THREE.MeshBasicMaterial({ map: tex }),
+      ...Array(3).fill(new THREE.MeshStandardMaterial({ color: 0x16233a })),
+    ]);
+    mesa.position.y = -0.025;
+    this.tablero.add(mesa);
+    const orilla = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(lado, 0.05, lado)), new THREE.LineBasicMaterial({ color: 0x5aa9ff }));
+    orilla.position.y = -0.025;
+    this.tablero.add(orilla);
 
-    // ---- panel de información (arriba, al fondo) ----
-    const panel = crearEntidad(this.el, { position: '0 1.84 -2.2' });
-    crearEntidad(panel, { geometry: 'primitive: plane; width: 2.26; height: 1.4', material: 'shader: flat; color: #5AA9FF; opacity: 0.5; transparent: true', position: '0 0 -0.035' });
-    crearEntidad(panel, { geometry: 'primitive: plane; width: 2.22; height: 1.36', material: 'shader: flat; color: #06080D; opacity: 0.92; transparent: true', position: '0 0 -0.03' });
-    ['inicio', 'juego', 'fin'].forEach((nombre) => {
-      this.pantallas[nombre] = crearEntidad(panel, { visible: false });
-    });
-
-    const ini = this.pantallas.inicio;
-    this.lienzoTitulo = crearEntidad(ini, { lienzo: 'ancho: 2; alto: 0.5', position: '0 0.38 0' });
-    this.crearBoton('inicio', ini, 'Practicar (sin tiempo)', '-0.45 -0.1 0.01', { ancho: 0.76, alto: 0.16, accion: 'practicar' });
-    this.crearBoton('inicio', ini, 'Empezar ronda · 3 min', '0.45 -0.1 0.01', { ancho: 0.76, alto: 0.16, accion: 'empezar', estilo: 'principal' });
-    this.crearBoton('inicio', ini, 'Menú de juegos', '0 -0.6 0.01', { ancho: 0.6, alto: 0.1, accion: 'menu' });
-    this.lienzoSeguridad = crearEntidad(ini, { lienzo: 'ancho: 2; alto: 0.22', position: '0 -0.42 0' });
-
-    const jue = this.pantallas.juego;
-    this.lienzoBarra = crearEntidad(jue, { lienzo: 'ancho: 2; alto: 0.16', position: '0 0.5 0' });
-    this.lienzoInfo = crearEntidad(jue, { lienzo: 'ancho: 2; alto: 0.64', position: '0 0.07 0' });
-    this.lienzoMensaje = crearEntidad(jue, { lienzo: 'ancho: 2; alto: 0.1', position: '0 -0.33 0' });
-    this.lienzoPista = crearEntidad(jue, { lienzo: 'ancho: 2; alto: 0.12', position: '0 -0.52 0' });
-
-    const fin = this.pantallas.fin;
-    this.lienzoResultado = crearEntidad(fin, { lienzo: 'ancho: 2; alto: 0.92', position: '0 0.12 0' });
-    this.crearBoton('fin', fin, 'Nueva ronda', '-0.42 -0.5 0.01', { ancho: 0.76, alto: 0.16, accion: 'nueva', estilo: 'principal' });
-    this.crearBoton('fin', fin, 'Menú de juegos', '0.42 -0.5 0.01', { ancho: 0.76, alto: 0.16, accion: 'menu' });
-
-    // ---- mesa holográfica con el tablero (abajo, cerca) ----
-    const pedestal = crearEntidad(this.el, { position: '0 0.33 -1.0' });
-    pedestal.setObject3D('mesh', new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.16, 0.66, 24),
-      new THREE.MeshStandardMaterial({ color: 0x111a38, metalness: 0.6, roughness: 0.4 }),
-    ));
-    this.mesa = crearEntidad(this.el, { position: '0 0.78 -1.0', rotation: '28 0 0' });
-    const caja = new THREE.BoxGeometry(0.95, 0.03, 1.1);
-    const base = new THREE.Mesh(caja, new THREE.MeshStandardMaterial({ color: 0x0b1330, metalness: 0.5, roughness: 0.45 }));
-    const orilla = new THREE.LineSegments(new THREE.EdgesGeometry(caja), new THREE.LineBasicMaterial({ color: 0x5aa9ff }));
-    const grupoBase = new THREE.Group();
-    grupoBase.add(base, orilla);
-    grupoBase.position.set(0, -0.016, 0.05);
-    crearEntidad(this.mesa, {}).setObject3D('mesh', grupoBase);
-
-    this.casillas = [];
-    for (let c = 0; c < 4; c++) {
-      this.casillas.push([]);
-      for (let f = 0; f < 4; f++) {
-        const x = (c - 1.5) * S;
-        const z = (f - 1.5) * S;
-        this.casillas[c].push(this.crearBoton('juego', this.mesa, nombreCasilla(c, f), `${x} 0.002 ${z}`,
-          { ancho: S - 0.012, alto: S - 0.012, estilo: 'casilla', accion: 'casilla', valor: `${c},${f}` }, '-90 0 0'));
+    // casillas (se pintan de azul las que ya pisó el robot)
+    this.celdas = new Map();
+    for (let f = 0; f < n; f++) {
+      for (let c = 0; c < n; c++) {
+        const base = (c + f) % 2 ? 0x13233d : 0x172b4a;
+        const mat = new THREE.MeshBasicMaterial({ color: base });
+        const m = new THREE.Mesh(new THREE.BoxGeometry(S - 0.016, 0.01, S - 0.016), mat);
+        m.position.copy(this.posicion(c, f)).setY(0.005);
+        this.tablero.add(m);
+        this.celdas.set(clave(c, f), { mat, base });
       }
     }
-    // letras de columna, números de fila y la palabra ARRIBA
-    for (let c = 0; c < 4; c++) {
-      const etiqueta = crearEntidad(this.mesa, { lienzo: 'ancho: 0.1; alto: 0.07', position: `${(c - 1.5) * S} 0.002 ${-2 * S - 0.045}`, rotation: '-90 0 0' });
-      pintar(etiqueta, (ctx, w, h) => texto(ctx, COLUMNAS[c], w / 2, h / 2, { tam: h * 0.8, peso: 700, color: COLOR.acento, alinear: 'center' }));
-    }
-    for (let f = 0; f < 4; f++) {
-      const etiqueta = crearEntidad(this.mesa, { lienzo: 'ancho: 0.07; alto: 0.1', position: `${-2 * S - 0.045} 0.002 ${(f - 1.5) * S}`, rotation: '-90 0 0' });
-      pintar(etiqueta, (ctx, w, h) => texto(ctx, String(f + 1), w / 2, h / 2, { tam: w * 0.8, peso: 700, color: COLOR.acento, alinear: 'center' }));
-    }
-    const arriba = crearEntidad(this.mesa, { lienzo: 'ancho: 0.4; alto: 0.065', position: `0 0.002 ${-2 * S - 0.115}`, rotation: '-90 0 0' });
-    pintar(arriba, (ctx, w, h) => texto(ctx, '↑ ARRIBA', w / 2, h / 2, { tam: h * 0.72, peso: 700, color: COLOR.magenta, alinear: 'center' }));
 
-    // botones sobre la mesa, junto al tablero
-    const zBotones = 2 * S + 0.1;
-    this.crearBoton('juego', this.mesa, 'Saltar', `-0.3 0.002 ${zBotones}`, { ancho: 0.24, alto: 0.1, accion: 'saltar' }, '-90 0 0');
-    this.botonTerminar = this.crearBoton('juego', this.mesa, 'Terminar', `0 0.002 ${zBotones}`, { ancho: 0.24, alto: 0.1, accion: 'terminar' }, '-90 0 0');
-    this.crearBoton('juego', this.mesa, 'Enviar', `0.3 0.002 ${zBotones}`, { ancho: 0.28, alto: 0.1, accion: 'enviar', estilo: 'principal' }, '-90 0 0');
+    // marca de inicio (aro azul)
+    this.marcaInicio = new THREE.Mesh(new THREE.RingGeometry(S * 0.36, S * 0.43, 40), new THREE.MeshBasicMaterial({ color: 0x5aa9ff, side: THREE.DoubleSide }));
+    this.marcaInicio.rotation.x = -Math.PI / 2;
+    this.tablero.add(this.marcaInicio);
 
-    // el robot y su rastro
+    // hoyos y meta: escondidos hasta que se revela el mapa
+    this.grupoHoyos = new THREE.Group();
+    this.tablero.add(this.grupoHoyos);
+    this.meta = new THREE.Group();
+    const aro = new THREE.Mesh(new THREE.TorusGeometry(S * 0.34, 0.016, 8, 40), new THREE.MeshBasicMaterial({ color: 0x3ddc97 }));
+    aro.rotation.x = -Math.PI / 2;
+    aro.position.y = 0.02;
+    const asta = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.32, 8), new THREE.MeshBasicMaterial({ color: 0xc9ced6 }));
+    asta.position.set(0.07, 0.16, 0.07);
+    const banderin = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.07), new THREE.MeshBasicMaterial({ color: 0x3ddc97, side: THREE.DoubleSide }));
+    banderin.position.set(0.125, 0.28, 0.07);
+    this.meta.add(aro, asta, banderin);
+    this.meta.visible = false;
+    this.tablero.add(this.meta);
+
     this.robot = crearRobot();
-    crearEntidad(this.mesa, {}).setObject3D('mesh', this.robot);
-    this.rastro = [];
-    const grupoRastro = new THREE.Group();
-    for (let i = 0; i < 24; i++) {
-      const punto = new THREE.Mesh(
-        new THREE.RingGeometry(0.022, 0.034, 24),
-        new THREE.MeshBasicMaterial({ color: 0x5aa9ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide }),
-      );
-      punto.rotation.x = -Math.PI / 2;
-      punto.visible = false;
-      grupoRastro.add(punto);
-      this.rastro.push(punto);
-    }
-    crearEntidad(this.mesa, {}).setObject3D('mesh', grupoRastro);
+    this.tablero.add(this.robot);
 
-    this.dibujarInicio();
+    // pantalla grande arriba del tablero (todo se dibuja ahí)
+    this.pantalla = crearEntidad(this.el, { lienzo: 'ancho: 2.4; alto: 0.9', position: '0 1.98 -2.95' });
+    this.lienzoResultado = crearEntidad(this.el, { lienzo: 'ancho: 2.2; alto: 0.97', position: '0 1.9 -2.9', visible: false });
+
+    // consola baja (como en las piernas): flechas, cuántas casillas y Mover
+    this.consola = crearEntidad(this.el, { position: '0 0.42 -0.55', rotation: '-60 0 0' });
+    crearEntidad(this.consola, { geometry: 'primitive: plane; width: 1.36; height: 0.66', material: 'shader: flat; color: #5AA9FF; opacity: 0.35; transparent: true', position: '0 0 -0.012' });
+    crearEntidad(this.consola, { geometry: 'primitive: plane; width: 1.32; height: 0.62', material: 'shader: flat; color: #06080D; opacity: 0.95; transparent: true', position: '0 0 -0.008' });
+    this.lienzoConsola = crearEntidad(this.consola, { lienzo: 'ancho: 1.28; alto: 0.12', position: '0 0.24 0' });
+    const b = (grupo, textoBoton, x, y, ancho, accion, valor = '', estilo = 'tecla', alto = 0.11) => {
+      const el = crearEntidad(this.consola, { position: `${x} ${y} 0.01`, boton: { texto: textoBoton, ancho, alto, accion, valor, estilo }, visible: false });
+      this.botones[grupo].push(el);
+      return el;
+    };
+    // flechas en cruz (a la izquierda)
+    this.botonesFlecha = {
+      arriba: b('juego', '↑', -0.44, 0.1, 0.14, 'flecha', 'arriba', 'tecla', 0.12),
+      izquierda: b('juego', '←', -0.6, -0.04, 0.14, 'flecha', 'izquierda', 'tecla', 0.12),
+      derecha: b('juego', '→', -0.28, -0.04, 0.14, 'flecha', 'derecha', 'tecla', 0.12),
+      abajo: b('juego', '↓', -0.44, -0.18, 0.14, 'flecha', 'abajo', 'tecla', 0.12),
+    };
+    // cuántas casillas (al centro)
+    this.botonesNumero = [1, 2, 3, 4].map((k, i) => b('juego', String(k), -0.08 + (i % 2) * 0.16, 0.06 - Math.floor(i / 2) * 0.15, 0.14, 'cuantas', String(k), 'tecla', 0.13));
+    // la instrucción armada y Mover (a la derecha)
+    this.lienzoInstruccion = crearEntidad(this.consola, { lienzo: 'ancho: 0.42; alto: 0.15', position: '0.4 0.07 0' });
+    this.botonMover = b('juego', '▶ Mover', 0.4, -0.12, 0.42, 'mover', '', 'principal', 0.14);
+    this.botonTerminar = b('juego', 'Terminar', 0.4, -0.255, 0.22, 'terminar', '', 'tecla', 0.07);
+    b('inicio', 'Práctica', -0.42, -0.06, 0.36, 'practicar', '', 'tecla', 0.15);
+    b('inicio', `Empezar ronda · ${this.datos.minutos_ronda} min`, 0.06, -0.06, 0.52, 'empezar', '', 'principal', 0.15);
+    b('inicio', 'Menú', 0.49, -0.06, 0.26, 'menu', '', 'tecla', 0.15);
+    b('fin', 'Nueva ronda', -0.3, -0.06, 0.5, 'nueva', '', 'principal', 0.15);
+    b('fin', 'Menú de juegos', 0.3, -0.06, 0.5, 'menu', '', 'tecla', 0.15);
+  },
+
+  posicion(c, f) {
+    const n = this.datos.tablero;
+    return new THREE.Vector3((c - (n - 1) / 2) * ROBOT.celda, 0, (f - (n - 1) / 2) * ROBOT.celda);
+  },
+
+  colocarRobot({ c, f }, giro = this.giro || 0) {
+    this.giro = giro;
+    this.robot.position.copy(this.posicion(c, f)).setY(0.01);
+    this.robot.rotation.y = -giro * Math.PI / 2;
+    this.robot.scale.setScalar(1);
   },
 
   mostrar(nombre) {
-    this.pantalla = nombre;
-    Object.entries(this.pantallas).forEach(([n, el]) => el.setAttribute('visible', n === nombre));
-    Object.entries(this.botones).forEach(([n, lista]) => {
-      lista.forEach((b) => b.classList.toggle('clickable', n === nombre && b.getAttribute('visible') !== false));
+    this.estado = nombre;
+    const grupo = nombre === 'inicio' || nombre === 'fin' ? nombre : 'juego';
+    Object.entries(this.botones).forEach(([g, lista]) => {
+      lista.forEach((el) => {
+        let si = g === grupo;
+        if (el === this.botonTerminar) si = grupo === 'juego' && this.modo === 'practica';
+        el.setAttribute('visible', si);
+        el.classList.toggle('clickable', si);
+      });
     });
+    this.lienzoInstruccion.setAttribute('visible', grupo === 'juego');
+    this.lienzoResultado.setAttribute('visible', nombre === 'fin');
+    this.pantalla.setAttribute('visible', nombre !== 'fin');
     refrescarApuntadores();
+    this.dibujarConsola();
+    this.dibujarPantalla();
   },
 
-  // --- lógica ---
-
-  presionar(accion, valor) {
-    if (accion === 'menu') return irA('index.html');
-    if (accion === 'empezar' || accion === 'practicar') {
-      this.empezar(accion === 'practicar' ? 'practica' : 'ronda');
-    } else if (accion === 'nueva') {
-      this.dibujarInicio();
-      this.mostrar('inicio');
-    } else if (this.pantalla === 'juego') {
-      if (accion === 'terminar') return this.terminar();
-      if (this.bloqueado() || this.animacion) return;
-      if (accion === 'casilla') this.seleccionar(valor);
-      if (accion === 'enviar') this.enviar();
-      if (accion === 'saltar') {
-        this.saltados += 1;
-        this.bloquear('Saltaste el programa');
-        this.nuevoReto();
-      }
-    }
-  },
-
-  /** En la computadora: escribe la casilla (por ejemplo c2) y presiona Enter. */
-  teclaFisica(e) {
-    if (this.pantalla !== 'juego') return;
-    const tecla = e.key.toUpperCase();
-    if (COLUMNAS.includes(tecla)) this.columnaTecleada = COLUMNAS.indexOf(tecla);
-    else if ('1234'.includes(tecla) && this.columnaTecleada !== undefined) this.presionar('casilla', `${this.columnaTecleada},${Number(tecla) - 1}`);
-    else if (e.key === 'Enter') this.presionar('enviar');
-  },
+  // --- flujo ---
 
   empezar(modo) {
     this.modo = modo;
-    this.puntaje = 0;
-    this.errores = 0;
-    this.saltados = 0;
     this.nivel = 1;
-    this.bloqueoHasta = 0;
-    this.mensaje = null;
-    this.animacion = null;
-    this.finRonda = performance.now() + CONFIG.segundosRonda * 1000;
-    this.botonTerminar.setAttribute('visible', modo === 'practica');
-    this.nuevoReto();
-    this.mostrar('juego');
-    this.dibujarTodo();
-    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Tienen 3 minutos', COLOR.acento);
+    this.metas = 0;
+    this.hundidos = 0;
+    this.instrucciones = 0;
+    this.jugadasPorNivel = {};
+    this.mapa = null;
+    this.finRonda = performance.now() + this.datos.minutos_ronda * 60 * 1000;
     rondaComun.empezar(modo);
     sonido.nivel();
+    this.nuevoMapa();
   },
 
-  nuevoReto() {
-    this.reto = generarReto(this.nivel, this.reto);
-    this.limpiarSeleccion();
-    this.rastro.forEach((p) => { p.visible = false; });
-    this.colocarRobot(this.reto.inicio);
-    this.dibujarInfo();
+  /** Elige el mapa del nivel (se turnan los dos de cada nivel) y un inicio al azar. */
+  nuevoMapa() {
+    const nivel = Math.min(this.nivel, this.nivelMax);
+    const delNivel = this.mapas.filter((m) => m.nivel === nivel);
+    const k = this.jugadasPorNivel[nivel] || 0;
+    this.jugadasPorNivel[nivel] = k + 1;
+    let mapa = delNivel[k % delNivel.length];
+    if (this.mapa && mapa.id === this.mapa.id && delNivel.length > 1) mapa = delNivel[(k + 1) % delNivel.length];
+    this.mapa = mapa;
+    this.inicio = mapa.inicios[Math.floor(Math.random() * mapa.inicios.length)];
+    this.posicionRobot = { ...this.inicio };
+    this.historial = [];
+    this.flecha = null;
+    this.cuantas = null;
+    this.animacion = null;
+    this.revelar = null;
+    this.aviso = { tipo: 'nuevo' };
+    // tablero limpio: sin hoyos ni meta a la vista
+    while (this.grupoHoyos.children.length) this.grupoHoyos.remove(this.grupoHoyos.children[0]);
+    this.meta.visible = false;
+    this.celdas.forEach((x) => x.mat.color.setHex(x.base));
+    this.marcaInicio.position.copy(this.posicion(this.inicio.c, this.inicio.f)).setY(0.012);
+    this.marcaInicio.visible = true;
+    this.robot.visible = true;
+    this.colocarRobot(this.inicio, 0);
+    this.pintarPisada(this.inicio);
+    this.mostrar('jugada');
   },
 
-  seleccionar(valor) {
-    const [c, f] = valor.split(',').map(Number);
-    this.limpiarSeleccion();
-    this.seleccion = { c, f };
-    this.casillas[c][f].setAttribute('boton', 'elegido', true);
+  elegirFlecha(nombre) {
+    this.flecha = nombre;
+    Object.entries(this.botonesFlecha).forEach(([k, el]) => el.setAttribute('boton', 'elegido', k === nombre));
     sonido.tecla();
-    this.dibujarInfo();
+    this.dibujarConsola();
   },
 
-  limpiarSeleccion() {
-    if (this.seleccion) this.casillas[this.seleccion.c][this.seleccion.f].setAttribute('boton', 'elegido', false);
-    this.seleccion = null;
+  elegirCuantas(k) {
+    this.cuantas = k;
+    this.botonesNumero.forEach((el, i) => el.setAttribute('boton', 'elegido', i + 1 === k));
+    sonido.tecla();
+    this.dibujarConsola();
   },
 
-  enviar() {
-    if (!this.seleccion) {
-      this.avisar('Primero toca una casilla del tablero', COLOR.tenue);
+  mover() {
+    if (!this.flecha || !this.cuantas) {
+      this.aviso = { tipo: 'falta' };
+      sonido.tecla();
+      this.dibujarPantalla();
       return;
     }
-    const { final } = this.reto;
-    if (this.seleccion.c === final.c && this.seleccion.f === final.f) {
-      this.puntaje += 1;
-      const nivelNuevo = Math.min(CONFIG.nivelMaximo, 1 + Math.floor(this.puntaje / CONFIG.aciertosPorNivel));
+    const sim = seguirInstruccion(this.mapa, this.posicionRobot, this.flecha, this.cuantas);
+    this.instrucciones += 1;
+    this.historial.push({ flecha: this.flecha, cuantas: this.cuantas, resultado: null });
+    this.animacion = { sim, desde: { ...this.posicionRobot }, giro: FLECHAS[this.flecha].giro, t0: performance.now(), ultimo: -1 };
+    this.colocarRobot(this.posicionRobot, FLECHAS[this.flecha].giro);
+    this.flecha = null;
+    this.cuantas = null;
+    Object.values(this.botonesFlecha).forEach((el) => el.setAttribute('boton', 'elegido', false));
+    this.botonesNumero.forEach((el) => el.setAttribute('boton', 'elegido', false));
+    this.mostrar('moviendo');
+  },
+
+  /** Termina el movimiento: listo, se hundió, se salió o llegó. */
+  terminarMovimiento() {
+    const { sim } = this.animacion;
+    const ultima = sim.camino[sim.camino.length - 1];
+    const paso = this.historial[this.historial.length - 1];
+    paso.resultado = sim.resultado;
+    this.animacion = null;
+    if (sim.resultado === 'bien') {
+      this.posicionRobot = { ...ultima };
+      this.aviso = { tipo: 'listo', donde: nombreCasilla(ultima.c, ultima.f) };
       sonido.bien();
-      this.avisar(`¡Correcto! El robot termina en ${nombreCasilla(final.c, final.f)} · +1`, COLOR.bien);
-      this.dibujarBarra();
-      this.animarRecorrido(() => {
-        if (nivelNuevo > this.nivel) {
-          this.nivel = nivelNuevo;
-          this.avisar(this.nivel === 3 ? '¡Nivel 3! Ahora hay programas con "Repite"' : `¡Nivel ${this.nivel}! Programas más largos`, COLOR.acento);
-          sonido.nivel();
-        }
-        this.nuevoReto();
-        this.dibujarBarra();
-      });
-    } else {
-      this.errores += 1;
-      this.limpiarSeleccion();
-      this.bloquear('Incorrecto');
+      this.mostrar('jugada');
+      return;
     }
+    if (sim.resultado === 'meta') {
+      this.posicionRobot = { ...ultima };
+      this.metas += 1;
+      this.aviso = { tipo: 'meta', nivel: this.nivel };
+      this.nivel += 1;
+      this.fanfarria();
+    } else {
+      this.hundidos += 1;
+      this.aviso = { tipo: sim.resultado, donde: sim.resultado === 'hoyo' ? nombreCasilla(ultima.c, ultima.f) : null };
+      sonido.mal();
+      sonido.tono(140, 0.7, 'sine', 0.12, 0.15);
+    }
+    // se ve el mapa completo unos segundos y luego sigue otro
+    this.mostrarMapa();
+    this.revelar = { hasta: performance.now() + this.datos.segundos_revelar * 1000, caida: sim.resultado !== 'meta' ? performance.now() : null };
+    this.mostrar('revelando');
   },
 
-  bloquear(motivo) {
-    this.bloqueoHasta = performance.now() + CONFIG.segundosBloqueo * 1000;
-    this.avisar(`${motivo}: bloqueo de ${CONFIG.segundosBloqueo} segundos`, COLOR.mal);
-    sonido.mal();
-    this.dibujarInfo();
+  /** Dibuja los hoyos y la meta del mapa actual. */
+  mostrarMapa() {
+    while (this.grupoHoyos.children.length) this.grupoHoyos.remove(this.grupoHoyos.children[0]);
+    const S = ROBOT.celda;
+    const fondo = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const borde = new THREE.MeshBasicMaterial({ color: 0xff5c6c });
+    this.mapa.hoyos.forEach((k) => {
+      const [c, f] = k.split(',').map(Number);
+      const p = this.posicion(c, f);
+      const hoyo = new THREE.Mesh(new THREE.CircleGeometry(S * 0.42, 32), fondo);
+      hoyo.rotation.x = -Math.PI / 2;
+      hoyo.position.copy(p).setY(0.012);
+      const aro = new THREE.Mesh(new THREE.RingGeometry(S * 0.42, S * 0.47, 32), borde);
+      aro.rotation.x = -Math.PI / 2;
+      aro.position.copy(p).setY(0.013);
+      this.grupoHoyos.add(hoyo, aro);
+    });
+    this.meta.position.copy(this.posicion(this.mapa.meta.c, this.mapa.meta.f));
+    this.meta.visible = true;
   },
 
-  bloqueado() {
-    return performance.now() < this.bloqueoHasta;
-  },
-
-  avisar(textoAviso, color) {
-    this.mensaje = { texto: textoAviso, color, hasta: performance.now() + 2600 };
-    this.dibujarMensaje();
+  pintarPisada({ c, f }) {
+    const celda = this.celdas.get(clave(c, f));
+    if (celda) celda.mat.color.setHex(0x245a9c);
   },
 
   terminar() {
     this.animacion = null;
+    this.revelar = null;
     sonido.fin();
     rondaComun.terminar();
     this.registro = this.modo === 'ronda'
-      ? marcador.registrar('robot', this.puntaje, `nivel ${this.nivel} · errores ${this.errores} · saltados ${this.saltados}`, () => this.dibujarResultado())
+      ? marcador.registrar('robot', this.metas, `nivel ${Math.min(this.nivel, this.nivelMax)} · hundidos ${this.hundidos} · instrucciones ${this.instrucciones}`, () => this.dibujarResultado())
       : null;
     this.dibujarResultado();
     this.mostrar('fin');
   },
 
-  // --- robot en el tablero ---
-
-  posicion(c, f) {
-    return { x: (c - 1.5) * CONFIG.casilla, z: (f - 1.5) * CONFIG.casilla };
+  /** Al llegar a la meta: fanfarria fuerte para que todo el equipo la oiga. */
+  fanfarria() {
+    [523, 659, 784, 1047].forEach((fr, i) => sonido.tono(fr, 0.22, 'triangle', 0.16, i * 0.12));
+    sonido.tono(1047, 0.6, 'square', 0.06, 0.5);
   },
 
-  colocarRobot({ c, f, d }) {
-    const p = this.posicion(c, f);
-    this.robot.position.set(p.x, 0.004, p.z);
-    this.robot.rotation.y = -d * Math.PI / 2;
+  presionar(accion, valor) {
+    if (accion === 'menu') return irA('index.html');
+    if (accion === 'practicar') return this.empezar('practica');
+    if (accion === 'empezar') return this.empezar('ronda');
+    if (accion === 'nueva') {
+      this.robot.visible = true;
+      this.mostrar('inicio');
+      return;
+    }
+    if (accion === 'terminar') return this.terminar();
+    if (this.estado !== 'jugada') return;
+    if (accion === 'flecha') this.elegirFlecha(valor);
+    else if (accion === 'cuantas') this.elegirCuantas(Number(valor));
+    else if (accion === 'mover') this.mover();
   },
 
-  animarRecorrido(alTerminar) {
-    this.animacion = { estados: this.reto.estados, inicio: performance.now(), ultimo: -1, alTerminar };
-    this.dibujarInfo();
+  /** En la computadora: flechas del teclado, números 1 a 4 y Enter. */
+  teclaFisica(e) {
+    const flechas = { ArrowUp: 'arriba', ArrowDown: 'abajo', ArrowLeft: 'izquierda', ArrowRight: 'derecha' };
+    if (flechas[e.key]) { e.preventDefault(); this.presionar('flecha', flechas[e.key]); } else if ('1234'.includes(e.key) && e.key.length === 1) this.presionar('cuantas', e.key);
+    else if (e.key === 'Enter') this.presionar('mover');
   },
+
+  // --- animación ---
 
   tick(t) {
-    // la antena parpadea
     if (this.robot) this.robot.userData.bola.scale.setScalar(1 + 0.25 * Math.sin(t / 250));
-    if (this.pantalla !== 'juego') return;
+    if (this.estado === 'inicio' || this.estado === 'fin') return;
     const ahora = performance.now();
-
-    if (this.animacion) {
-      const a = this.animacion;
-      const k = (ahora - a.inicio) / CONFIG.msPorPaso;
-      const i = Math.floor(k);
-      const ultimo = a.estados.length - 1;
-      if (i >= ultimo) {
-        this.colocarRobot(a.estados[ultimo]);
-        if (ahora - a.inicio > ultimo * CONFIG.msPorPaso + 500) {
-          this.animacion = null;
-          a.alTerminar();
-        }
-      } else {
-        const e0 = a.estados[i];
-        const e1 = a.estados[i + 1];
-        const fraccion = k - i;
-        const p0 = this.posicion(e0.c, e0.f);
-        const p1 = this.posicion(e1.c, e1.f);
-        this.robot.position.set(p0.x + (p1.x - p0.x) * fraccion, 0.004, p0.z + (p1.z - p0.z) * fraccion);
-        const g0 = -e0.d * Math.PI / 2;
-        let diferencia = -e1.d * Math.PI / 2 - g0;
-        while (diferencia > Math.PI) diferencia -= 2 * Math.PI;
-        while (diferencia < -Math.PI) diferencia += 2 * Math.PI;
-        this.robot.rotation.y = g0 + diferencia * fraccion;
-        if (i !== a.ultimo) {
-          a.ultimo = i;
-          sonido.paso();
-          const punto = this.rastro[i % this.rastro.length];
-          punto.position.set(p0.x, 0.006, p0.z);
-          punto.visible = true;
-        }
+    if (this.animacion) this.animar(ahora);
+    if (this.revelar) {
+      const r = this.revelar;
+      if (r.caida) {
+        // el robot se hunde (o cae del tablero) y desaparece
+        const k = Math.min(1, (ahora - r.caida) / 900);
+        this.robot.position.y = 0.01 - k * k * 0.45;
+        this.robot.scale.setScalar(1 - k * 0.7);
+        this.robot.rotation.y += 0.12;
+        this.robot.visible = k < 1;
+      }
+      if (ahora >= r.hasta) {
+        this.robot.visible = true;
+        this.revelar = null;
+        this.nuevoMapa();
       }
     }
-
     if (this.modo === 'ronda' && ahora >= this.finRonda) {
+      this.robot.visible = true;
       this.terminar();
       return;
     }
     const segundo = Math.floor(ahora / 1000);
     if (segundo !== this.ultimoSegundo) {
       this.ultimoSegundo = segundo;
-      this.dibujarBarra();
       rondaComun.segundo((this.finRonda - ahora) / 1000, this.modo);
-      if (this.bloqueoHasta && ahora < this.bloqueoHasta + 1000) this.dibujarInfo();
-      if (this.mensaje && ahora > this.mensaje.hasta) {
-        this.mensaje = null;
-        this.dibujarMensaje();
-      }
+      this.dibujarPantalla();
+    }
+  },
+
+  animar(ahora) {
+    const a = this.animacion;
+    const { camino } = a.sim;
+    const k = (ahora - a.t0) / ROBOT.msPaso;
+    const i = Math.floor(k);
+    if (i >= camino.length) {
+      const ultima = camino[camino.length - 1];
+      this.robot.position.copy(this.posicion(ultima.c, ultima.f)).setY(0.01);
+      // casillas pisadas (la del hoyo o la de afuera no)
+      const seguras = a.sim.resultado === 'bien' || a.sim.resultado === 'meta' ? camino : camino.slice(0, -1);
+      seguras.forEach((x) => this.pintarPisada(x));
+      this.terminarMovimiento();
+      return;
+    }
+    const de = i === 0 ? a.desde : camino[i - 1];
+    const a1 = camino[i];
+    const p0 = this.posicion(de.c, de.f);
+    const p1 = this.posicion(a1.c, a1.f);
+    const fr = k - i;
+    this.robot.position.lerpVectors(p0, p1, fr).setY(0.01 + Math.sin(fr * Math.PI) * 0.03);
+    if (i !== a.ultimo) {
+      a.ultimo = i;
+      sonido.paso();
+      if (i > 0) this.pintarPisada(camino[i - 1]);
     }
   },
 
   // --- dibujo ---
 
-  dibujarTodo() {
-    this.dibujarBarra();
-    this.dibujarInfo();
-    this.dibujarMensaje();
-    pintar(this.lienzoPista, (ctx, w, h) => {
-      texto(ctx, 'Apunta a una casilla de la mesa, presiona el gatillo y luego Enviar', w / 2, h / 2, { tam: 44, color: COLOR.tenue, alinear: 'center' });
+  dibujarConsola() {
+    pintar(this.lienzoConsola, (ctx, w, h) => {
+      if (this.estado === 'inicio') {
+        texto(ctx, 'Robot programado · el equipo te guía paso a paso', w / 2, h / 2, { tam: 52, peso: 600, color: COLOR.tenue, alinear: 'center' });
+      } else if (this.estado === 'fin') {
+        texto(ctx, 'Ronda terminada', w / 2, h / 2, { tam: 52, peso: 600, color: COLOR.tenue, alinear: 'center' });
+      } else {
+        texto(ctx, 'FLECHA', 150, h / 2, { tam: 40, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
+        texto(ctx, 'CASILLAS', 560, h / 2, { tam: 40, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
+        texto(ctx, 'INSTRUCCIÓN', 1010, h / 2, { tam: 40, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
+      }
+    });
+    pintar(this.lienzoInstruccion, (ctx, w, h) => {
+      fondoPanel(ctx, w, h, '#13233D');
+      if (!this.flecha && !this.cuantas) {
+        texto(ctx, 'elige flecha y número', w / 2, h / 2, { tam: 44, color: COLOR.tenue, alinear: 'center' });
+        return;
+      }
+      const f = this.flecha ? FLECHAS[this.flecha] : null;
+      const parte1 = f ? f.icono : '?';
+      const parte2 = this.cuantas ? `${this.cuantas} ${this.cuantas === 1 ? 'casilla' : 'casillas'}` : '? casillas';
+      texto(ctx, parte1, 70, h / 2, { tam: 110, peso: 700, color: f ? COLOR.acento : COLOR.tenue, alinear: 'center' });
+      texto(ctx, parte2, 140, h / 2, { tam: 66, peso: 700, color: this.cuantas ? COLOR.texto : COLOR.tenue });
     });
   },
 
-  dibujarInicio() {
-    pintar(this.lienzoTitulo, (ctx, w, h) => {
-      texto(ctx, 'ENLACE VR', w / 2, h * 0.13, { tam: 54, color: COLOR.acento, peso: 700, alinear: 'center' });
-      texto(ctx, 'Robot programado', w / 2, h * 0.38, { tam: 120, peso: 700, alinear: 'center' });
-      texto(ctx, 'Sigan el programa del manual y digan dónde termina el robot.', w / 2, h * 0.64, { tam: 52, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, 'Cuando estén listos, presionen Empezar', w / 2, h * 0.88, { tam: 52, peso: 600, color: COLOR.acento, alinear: 'center' });
-    });
-    pintar(this.lienzoSeguridad, (ctx, w, h) => {
-      fondoPanel(ctx, w, h, '#102039');
-      texto(ctx, 'Juega sentado · Correa del control en la muñeca', w / 2, h * 0.36, { tam: 46, alinear: 'center' });
-      texto(ctx, 'Al terminar, quítate el visor con las dos manos y pásalo con cuidado', w / 2, h * 0.7, { tam: 40, color: COLOR.tenue, alinear: 'center' });
-    });
-  },
+  dibujarPantalla() {
+    pintar(this.pantalla, (ctx, w, h) => {
+      fondoPanel(ctx, w, h, 'rgba(12,22,40,.96)');
+      if (this.estado === 'inicio') return this.dibujarInicio(ctx, w, h);
 
-  dibujarBarra() {
-    pintar(this.lienzoBarra, (ctx, w, h) => {
-      fondoPanel(ctx, w, h);
-      texto(ctx, 'ROBOT PROGRAMADO', 40, h / 2, { tam: 56, peso: 700 });
-      const anchoTitulo = ctx.measureText('ROBOT PROGRAMADO').width;
-      texto(ctx, `Nivel ${this.nivel}`, 40 + anchoTitulo + 36, h / 2, { tam: 46, color: COLOR.tenue });
-      texto(ctx, `Aciertos: ${this.puntaje}`, w * 0.62, h / 2, { tam: 58, peso: 700, alinear: 'center' });
+      // barra de arriba: nombre, nivel, metas y tiempo
+      texto(ctx, 'ROBOT PROGRAMADO', 50, 80, { tam: 54, peso: 700 });
+      texto(ctx, `Nivel ${Math.min(this.nivel, this.nivelMax)}`, 640, 80, { tam: 46, color: COLOR.tenue });
+      texto(ctx, `Metas: ${this.metas}`, w * 0.62, 80, { tam: 56, peso: 700, alinear: 'center' });
       if (this.modo === 'practica') {
-        texto(ctx, 'PRÁCTICA', w - 40, h / 2, { tam: 56, peso: 700, color: COLOR.acento, alinear: 'right' });
+        texto(ctx, 'PRÁCTICA', w - 50, 80, { tam: 54, peso: 700, color: COLOR.acento, alinear: 'right' });
       } else {
         const restante = (this.finRonda - performance.now()) / 1000;
-        texto(ctx, minutos(restante), w - 40, h / 2, { tam: 70, peso: 700, color: restante <= 30 ? COLOR.mal : COLOR.acento, alinear: 'right' });
+        texto(ctx, minutos(restante), w - 50, 80, { tam: 68, peso: 700, color: restante <= 30 ? COLOR.mal : COLOR.acento, alinear: 'right', fuente: MONO });
       }
+      ctx.fillStyle = 'rgba(242,244,248,.12)';
+      ctx.fillRect(40, 140, w - 80, 3);
+
+      // mapa e inicio: lo que el Operador le dice al equipo
+      texto(ctx, 'MAPA', 70, 205, { tam: 40, peso: 600, color: COLOR.tenue, fuente: MONO });
+      texto(ctx, String(this.mapa.id), 70, 340, { tam: 200, peso: 800, color: COLOR.acento });
+      texto(ctx, 'EL ROBOT EMPIEZA EN', 390, 205, { tam: 40, peso: 600, color: COLOR.tenue, fuente: MONO });
+      texto(ctx, nombreCasilla(this.inicio.c, this.inicio.f), 390, 340, { tam: 200, peso: 800 });
+      ctx.fillStyle = 'rgba(242,244,248,.12)';
+      ctx.fillRect(900, 175, 4, 300);
+
+      // el estado: listo, moviendo, se hundió, llegó
+      const x = 960;
+      const a = this.aviso || {};
+      if (this.estado === 'moviendo') {
+        texto(ctx, 'Moviendo…', x, 300, { tam: 110, peso: 700, color: COLOR.tenue });
+      } else if (a.tipo === 'listo') {
+        texto(ctx, '¡LISTO!', x, 270, { tam: 150, peso: 800, color: COLOR.bien });
+        texto(ctx, `Ahora está en ${a.donde}. Pidan la siguiente instrucción.`, x, 400, { tam: 46, color: COLOR.texto });
+      } else if (a.tipo === 'meta') {
+        texto(ctx, '¡LLEGASTE!', x, 270, { tam: 150, peso: 800, color: COLOR.bien });
+        texto(ctx, `+1 meta · ahora el nivel ${Math.min(this.nivel, this.nivelMax)}`, x, 400, { tam: 52, peso: 600, color: COLOR.texto });
+      } else if (a.tipo === 'hoyo' || a.tipo === 'fuera') {
+        texto(ctx, '¡SE HUNDIÓ!', x, 270, { tam: 140, peso: 800, color: COLOR.mal });
+        texto(ctx, a.tipo === 'hoyo' ? `En ${a.donde} había un hoyo. Así era el mapa.` : 'Se salió del tablero. Así era el mapa.', x, 400, { tam: 46, color: COLOR.texto });
+      } else if (a.tipo === 'falta') {
+        texto(ctx, 'Falta algo', x, 270, { tam: 110, peso: 700, color: COLOR.acento });
+        texto(ctx, 'Elige una flecha y cuántas casillas, luego Mover.', x, 400, { tam: 46, color: COLOR.texto });
+      } else {
+        texto(ctx, 'Díganle al equipo', x, 250, { tam: 64, peso: 700, color: COLOR.acento });
+        texto(ctx, `"Mapa ${this.mapa.id}, empieza en ${nombreCasilla(this.inicio.c, this.inicio.f)}"`, x, 340, { tam: 66, peso: 700 });
+        texto(ctx, 'Ustedes no ven los hoyos ni la meta: el equipo sí.', x, 425, { tam: 42, color: COLOR.tenue });
+      }
+
+      // las instrucciones de esta jugada
+      ctx.fillStyle = 'rgba(242,244,248,.12)';
+      ctx.fillRect(40, 500, w - 80, 3);
+      texto(ctx, 'INSTRUCCIONES', 70, 565, { tam: 40, peso: 600, color: COLOR.tenue, fuente: MONO });
+      let px = 420;
+      if (!this.historial || !this.historial.length) {
+        texto(ctx, 'todavía ninguna', px, 565, { tam: 44, color: COLOR.tenue });
+      } else {
+        this.historial.slice(-8).forEach((p) => {
+          const color = p.resultado === null ? COLOR.tenue : p.resultado === 'bien' || p.resultado === 'meta' ? COLOR.bien : COLOR.mal;
+          const marca = p.resultado === null ? '…' : p.resultado === 'bien' || p.resultado === 'meta' ? '✓' : '✗';
+          const etiqueta = `${FLECHAS[p.flecha].icono} ${p.cuantas} ${marca}`;
+          ctx.font = `700 52px ${MONO}`;
+          const ancho = ctx.measureText(etiqueta).width + 44;
+          rectRedondo(ctx, px, 530, ancho, 72, 16);
+          ctx.fillStyle = '#13233D';
+          ctx.fill();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = color;
+          ctx.stroke();
+          texto(ctx, etiqueta, px + 22, 567, { tam: 52, peso: 700, color, fuente: MONO });
+          px += ancho + 18;
+        });
+      }
+      texto(ctx, 'Una instrucción a la vez: flecha + casillas → Mover → "¡listo!"', w / 2, h - 70, { tam: 40, color: COLOR.tenue, alinear: 'center' });
+      return null;
     });
   },
 
-  dibujarInfo() {
-    const reto = this.reto;
-    pintar(this.lienzoInfo, (ctx, w, h) => {
-      fondoPanel(ctx, w, h);
-      const dir = DIRECCIONES[reto.inicio.d];
-      // programa
-      texto(ctx, 'PROGRAMA', 80, h * 0.15, { tam: 44, peso: 600, color: COLOR.tenue });
-      texto(ctx, String(reto.programa.id), 80, h * 0.5, { tam: 240, peso: 800, color: COLOR.acento });
-      texto(ctx, 'Búsquenlo en el manual', 80, h * 0.85, { tam: 38, color: COLOR.tenue });
-      // separador
-      ctx.fillStyle = 'rgba(255,255,255,.15)';
-      ctx.fillRect(w * 0.33, h * 0.1, 4, h * 0.8);
-      // inicio y dirección
-      texto(ctx, 'INICIO', w * 0.38, h * 0.15, { tam: 44, peso: 600, color: COLOR.tenue });
-      texto(ctx, nombreCasilla(reto.inicio.c, reto.inicio.f), w * 0.38, h * 0.47, { tam: 150, peso: 800 });
-      texto(ctx, 'MIRANDO HACIA', w * 0.6, h * 0.15, { tam: 44, peso: 600, color: COLOR.tenue });
-      texto(ctx, `${dir.flecha} ${dir.nombre}`, w * 0.6, h * 0.47, { tam: 104, peso: 800 });
-      // respuesta elegida
-      let respuesta = 'Tu respuesta: toca una casilla';
-      let colorRespuesta = COLOR.tenue;
-      if (this.animacion) { respuesta = 'El robot sigue el programa…'; colorRespuesta = COLOR.bien; }
-      else if (this.seleccion) { respuesta = `Tu respuesta: ${nombreCasilla(this.seleccion.c, this.seleccion.f)}`; colorRespuesta = COLOR.acento; }
-      texto(ctx, respuesta, w * 0.38, h * 0.82, { tam: 56, peso: 700, color: colorRespuesta });
-
-      const restante = (this.bloqueoHasta - performance.now()) / 1000;
-      if (restante > 0) {
-        ctx.fillStyle = 'rgba(40, 6, 14, 0.85)';
-        rectRedondo(ctx, 4, 4, w - 8, h - 8, 24);
-        ctx.fill();
-        texto(ctx, '¡ENLACE CAÍDO!', w / 2, h * 0.38, { tam: 96, peso: 800, color: COLOR.mal, alinear: 'center' });
-        texto(ctx, `Esperen ${Math.ceil(restante)} s · nadie habla`, w / 2, h * 0.64, { tam: 62, alinear: 'center' });
-      }
-    });
-  },
-
-  dibujarMensaje() {
-    pintar(this.lienzoMensaje, (ctx, w, h) => {
-      if (!this.mensaje) return;
-      texto(ctx, this.mensaje.texto, w / 2, h / 2, { tam: 56, peso: 600, color: this.mensaje.color, alinear: 'center' });
-    });
+  dibujarInicio(ctx, w, h) {
+    texto(ctx, 'ENLACE VR', w / 2, 90, { tam: 48, peso: 700, color: COLOR.acento, alinear: 'center' });
+    texto(ctx, 'Robot programado', w / 2, 200, { tam: 120, peso: 700, alinear: 'center' });
+    texto(ctx, 'Tú ves el robot. El equipo ve el mapa con los hoyos y la meta.', w / 2, 300, { tam: 50, color: COLOR.tenue, alinear: 'center' });
+    const pasos = [
+      '1. Diles el número de mapa y dónde empieza el robot.',
+      '2. Ellos te dicen una flecha y cuántas casillas: "dos hacia arriba".',
+      '3. Muévelo y diles "¡listo!". Así, paso a paso, hasta la meta.',
+    ];
+    pasos.forEach((p, i) => texto(ctx, p, 300, 400 + i * 70, { tam: 48, peso: 500 }));
+    texto(ctx, 'Si pisa un hoyo, se hunde y sigue otro mapa · Juega sentado · Correa en la muñeca', w / 2, h - 70, { tam: 38, color: COLOR.tenue, alinear: 'center' });
   },
 
   dibujarResultado() {
     pintar(this.lienzoResultado, (ctx, w, h) => dibujarFinalRonda(ctx, w, h, {
       practica: this.modo === 'practica',
-      puntaje: this.puntaje,
-      unidad: this.puntaje === 1 ? 'programa resuelto' : 'programas resueltos',
-      detalle: `Nivel alcanzado: ${this.nivel} · Errores: ${this.errores} · Saltados: ${this.saltados}`,
+      puntaje: this.metas,
+      unidad: this.metas === 1 ? 'meta alcanzada' : 'metas alcanzadas',
+      detalle: `Nivel alcanzado: ${Math.min(this.nivel, this.nivelMax)} · Se hundió: ${this.hundidos} · Instrucciones: ${this.instrucciones}`,
       registro: this.registro,
     }));
   },
