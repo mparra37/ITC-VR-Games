@@ -7,7 +7,7 @@ Dirección: `https://mparra37.github.io/ITC-VR-Games/codexia/`
 | Juego | Pista (al terminar una ronda con el mínimo) |
 | --- | --- |
 | Router humano: 6 puertas desde el inicio (NÚCLEO, FÁBRICA, PRESA, PLANTA, ANTENAS, INTERNET) y CUARENTENA en el nivel 3 | 3 paquetes → 1.º y 2.º número de la IP |
-| Arma a Ultrón: piezas de su robot por fuera y por dentro; 3 modelos que el equipo adivina por los hombros y el emblema | 4 piezas → 3.er número |
+| Arma a Ultrón: el robot ya viene armado por fuera; reconectan las 8 piezas de adentro (robot y computadora). 3 modelos que el equipo adivina por fuera: hombros, emblema del pecho y el lado del brazo cañón | 4 piezas → 3.er número |
 | Carrera de palabras, 5 minutos (palabras del agua, con un consejo cada una) | 3 palabras → 4.º número |
 | Misión final · Robot programado: el equipo guía a Ultrón con el mapa hasta la presa; si pisa una antena suya, escapa | 1.ª caída al agua → latitud · 2.ª → longitud |
 
@@ -15,7 +15,8 @@ Dirección: `https://mparra37.github.io/ITC-VR-Games/codexia/`
 
 | Archivo | Qué es |
 | --- | --- |
-| `index.html` | Menú web y 3D, con la **Bitácora** del visor (IP y GPS que lleva el equipo) y el botón **Nuevo equipo** |
+| `index.html` | Menú web y 3D, con la **Bitácora** del visor (IP, GPS y puntos del equipo) y el botón **Nuevo equipo** |
+| `marcador.html` | **Marcador de equipos**: se pegan los códigos que anotan los equipos y suma la mejor ronda de cada juego; se puede proyectar |
 | `guia.html` | Guía del taller (guion de 40 min) y descargas |
 | `js/mision.js` | **La IP y el GPS de Ultrón** (valores de ejemplo: cámbienlos aquí), los mínimos de cada juego y el avance guardado en el visor |
 | `js/robot.js` | Misión final: Ultrón, antenas, la presa (agua, salpicadura) y las pistas del GPS |

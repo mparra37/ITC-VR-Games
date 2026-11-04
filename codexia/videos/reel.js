@@ -162,7 +162,7 @@ const GUIONES = {
     area: 'ROBÓTICA · 5 MINUTOS',
     archivo: '../arma.html',
     componente: 'arma-computadora',
-    final: ['4 piezas = el 3.er número de la IP', 'Primero adivinan el modelo por sus detalles'],
+    final: ['4 piezas = el 3.er número de la IP', 'Reconectan su interior: primero adivinan el modelo'],
     preparar(j) {
       j.empezar('ronda');
       // un brazo: su lado cambia según el modelo, así que primero hay que adivinarlo
@@ -174,7 +174,7 @@ const GUIONES = {
       return d;
     },
     pasos: (d) => [
-      { t: 2.2, quien: 'OPERADOR', texto: `No sabe el modelo: describe hombros ${d.det.hombros} y un ${d.det.emblema} en la cintura` },
+      { t: 2.2, quien: 'OPERADOR', texto: `No sabe el modelo: describe hombros ${d.det.hombros}, un ${d.det.emblema} en el pecho y el cañón a la ${d.det.canon}` },
       { t: 6.0, quien: 'EQUIPO', texto: `¡Es el modelo ${d.modelo}! Y esa pieza es el ${d.nombre.toLowerCase()}: va en el ${d.n + 1}` },
       { t: 9.8, quien: 'OPERADOR', texto: `Apunta al número ${d.n + 1} y la pieza vuela a su lugar` },
     ],
@@ -188,7 +188,7 @@ const GUIONES = {
     ],
     manual(c, x, y, w, h, d) {
       encabezadoManual(c, x, y, w, `MODELO ${d.modelo} · ${d.det.nombre.toUpperCase()}`);
-      escribir(c, `Hombros ${d.det.hombros} · ${d.det.emblema}`, x + 30, y + 92, { tam: 26, peso: 700, color: '#c8102e', max: w - 60 });
+      escribir(c, `Hombros ${d.det.hombros} · ${d.det.emblema} · cañón a la ${d.det.canon}`, x + 30, y + 92, { tam: 26, peso: 700, color: '#c8102e', max: w - 60 });
       const lado = 140;
       rectRedondo(c, x + 30, y + 120, lado, lado, 14);
       c.fillStyle = '#E9EEF5';
@@ -532,6 +532,7 @@ async function principal() {
   musicaJuego.iniciar = () => {};
   musicaJuego.detener();
   win.eval('sonido').tono = () => {};
+  win.eval('sonido').ruido = () => {};
   await Promise.all([document.fonts.load(`700 40px ${LETRA}`), document.fonts.load(`600 30px ${MONO}`), win.document.fonts.ready]);
   await espera(1200);
 

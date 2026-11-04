@@ -295,6 +295,7 @@ const sonido = {
   tono(frecuencia, duracion, tipo = 'sine', volumen = 0.12, retraso = 0) {
     try {
       this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ctx.state === 'suspended') this.ctx.resume();
       const t = this.ctx.currentTime + retraso;
       const osc = this.ctx.createOscillator();
       const gan = this.ctx.createGain();
@@ -314,6 +315,24 @@ const sonido = {
   nivel() { [523, 659, 784].forEach((f, i) => this.tono(f, 0.15, 'triangle', 0.1, i * 0.1)); },
   fin() { [440, 330, 220].forEach((f, i) => this.tono(f, 0.3, 'square', 0.06, i * 0.22)); },
 };
+
+// El navegador (también el del visor) no deja sonar nada hasta que la persona toca algo. Con el primer
+// toque (mouse, teclado o el gatillo del control en VR) se prende el audio.
+function desbloquearAudio() {
+  try {
+    sonido.ctx = sonido.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (sonido.ctx.state === 'suspended') sonido.ctx.resume();
+  } catch (e) { /* sin audio */ }
+}
+['pointerdown', 'touchstart', 'keydown', 'click'].forEach((ev) => window.addEventListener(ev, desbloquearAudio, { capture: true }));
+document.addEventListener('DOMContentLoaded', () => {
+  const escena = document.querySelector('a-scene');
+  if (!escena) return;
+  escena.addEventListener('enter-vr', () => {
+    const sesion = escena.xrSession || (escena.renderer && escena.renderer.xr && escena.renderer.xr.getSession && escena.renderer.xr.getSession());
+    if (sesion) ['selectstart', 'select', 'squeezestart'].forEach((ev) => sesion.addEventListener(ev, desbloquearAudio));
+  });
+});
 
 // ---------- música de fondo (sin archivos) ----------
 //

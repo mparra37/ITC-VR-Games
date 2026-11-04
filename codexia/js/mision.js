@@ -7,6 +7,10 @@
  *   Robot programado     → la latitud (1.ª vez que Ultrón cae al agua) y la longitud (2.ª vez)
  * El avance se guarda en el visor (cada equipo tiene el suyo). "Nuevo equipo" en el menú lo borra.
  *
+ * Puntos del equipo: cada ronda guarda su puntaje; por juego cuenta la MEJOR ronda y el total es la suma
+ * de los 4 juegos. Se ve en la pantalla final, en la Bitácora del menú, y el profesor compara equipos en
+ * marcador.html con los códigos (que también guardan el número de equipo y el puntaje).
+ *
  * ▶ IP y GPS DE EJEMPLO: cámbienlos aquí por los que definan los organizadores del reto final.
  */
 /* global marcador */
@@ -43,8 +47,41 @@ const mision = {
   },
 
   reiniciar() {
-    try { localStorage.removeItem(this.clave); } catch (e) { /* sin almacenamiento */ }
+    try {
+      localStorage.removeItem(this.clave);
+      localStorage.removeItem('codexia-puntos');
+    } catch (e) { /* sin almacenamiento */ }
     document.dispatchEvent(new CustomEvent('codexia-pista'));
+  },
+
+  // ---------- puntos del equipo ----------
+
+  /** { router: { mejor, rondas }, ... } de este visor. */
+  puntos() {
+    try { return JSON.parse(localStorage.getItem('codexia-puntos') || '{}'); } catch (e) { return {}; }
+  },
+
+  anotarPuntos(juego, puntaje) {
+    const p = this.puntos();
+    const j = p[juego] || { mejor: 0, rondas: 0 };
+    j.rondas += 1;
+    j.mejor = Math.max(j.mejor, puntaje);
+    p[juego] = j;
+    try { localStorage.setItem('codexia-puntos', JSON.stringify(p)); } catch (e) { /* sin almacenamiento */ }
+    document.dispatchEvent(new CustomEvent('codexia-pista'));
+    return j;
+  },
+
+  /** Suma de la mejor ronda de cada juego. */
+  totalPuntos() {
+    return Object.values(this.puntos()).reduce((a, j) => a + j.mejor, 0);
+  },
+
+  /** "Router 7 · Arma 5 · Carrera — · Misión —" */
+  resumenPuntos() {
+    const p = this.puntos();
+    const cortos = { router: 'Router', arma: 'Arma', carrera: 'Carrera', robot: 'Misión' };
+    return Object.keys(cortos).map((k) => `${cortos[k]} ${p[k] ? p[k].mejor : '—'}`).join(' · ');
   },
 
   valor(parte) {
@@ -88,6 +125,9 @@ if (typeof marcador !== 'undefined') {
   marcador.registrar = (juego, puntaje, detalle, alCambiar) => {
     const registro = registrarOriginal(juego, puntaje, detalle, alCambiar);
     registro.pista = mision.terminarRonda(juego, puntaje);
+    mision.anotarPuntos(juego, puntaje);
+    registro.total = mision.totalPuntos();
+    registro.resumen = mision.resumenPuntos();
     return registro;
   };
 }

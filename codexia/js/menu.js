@@ -9,7 +9,7 @@
 
 window.MINIJUEGOS = [
   { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Ultrón inunda la red. Lean la IP de cada paquete y mándenlo a su lugar: núcleo, fábrica, presa…', nivel: 'Media · 3 min', voltear: true, video: 'videos/reel_router.mp4', pista: '1.º y 2.º número de la IP' },
-  { archivo: 'arma.html', area: 'Robótica', titulo: 'Arma a Ultrón', texto: 'Armen un robot de Ultrón por fuera y por dentro. Primero adivinen el modelo por sus detalles.', nivel: 'Fácil · 5 min', voltear: true, video: 'videos/reel_arma.mp4', pista: '3.er número de la IP' },
+  { archivo: 'arma.html', area: 'Robótica', titulo: 'Arma a Ultrón', texto: 'Reconecten el interior de un robot de Ultrón. Primero adivinen el modelo por fuera.', nivel: 'Fácil · 5 min', voltear: true, video: 'videos/reel_arma.mp4', pista: '3.er número de la IP' },
   { archivo: 'carrera.html', area: 'Binario · agua', titulo: 'Carrera de palabras', texto: 'Descifren los mensajes de Ultrón en binario. Cada palabra trae un consejo para cuidar el agua.', nivel: 'Media · 5 min', voltear: false, video: 'videos/reel_carrera.mp4', pista: '4.º número de la IP' },
   { archivo: 'robot.html', area: 'Misión final', titulo: 'Robot programado', texto: 'Con la IP hackean a Ultrón. El equipo tiene el mapa: guíenlo paso a paso hasta que caiga al agua.', nivel: 'Media · 5 min', voltear: false, video: 'videos/reel_robot.mp4', pista: 'Ubicación GPS' },
 ];
@@ -52,7 +52,7 @@ AFRAME.registerComponent('menu-juegos', {
     });
 
     // bitácora de la misión: lo que lleva este equipo (se guarda en el visor)
-    this.bitacora = crearEntidad(this.el, { lienzo: 'ancho: 0.9; alto: 0.9', position: '1.62 1.42 -1.15', rotation: '0 -45 0' });
+    this.bitacora = crearEntidad(this.el, { lienzo: 'ancho: 0.9; alto: 1.08', position: '1.62 1.38 -1.15', rotation: '0 -45 0' });
     this.dibujarBitacora();
     document.addEventListener('codexia-pista', () => this.dibujarBitacora());
 
@@ -131,18 +131,24 @@ AFRAME.registerComponent('menu-juegos', {
       ctx.strokeStyle = COLOR.acento;
       rectRedondo(ctx, 4, 4, w - 8, h - 8, 26);
       ctx.stroke();
-      texto(ctx, 'BITÁCORA DE LA MISIÓN', w / 2, h * 0.09, { tam: 46, peso: 700, color: COLOR.acento, alinear: 'center' });
-      texto(ctx, `Piezas: ${mision.cuantas()} de 6`, w / 2, h * 0.18, { tam: 40, color: COLOR.tenue, alinear: 'center' });
-      texto(ctx, 'IP DE ULTRÓN', 50, h * 0.3, { tam: 38, peso: 600, color: COLOR.tenue, fuente: MONO });
-      texto(ctx, mision.ipTexto(), w / 2, h * 0.41, { tam: 70, peso: 600, color: mision.ipCompleta() ? COLOR.texto : COLOR.tenue, alinear: 'center', fuente: MONO });
-      texto(ctx, 'UBICACIÓN GPS', 50, h * 0.55, { tam: 38, peso: 600, color: COLOR.tenue, fuente: MONO });
-      texto(ctx, `Lat  ${mision.tiene('lat') ? mision.valor('lat') : '__.____'}`, 70, h * 0.65, { tam: 56, peso: 600, fuente: MONO });
-      texto(ctx, `Lon ${mision.tiene('lon') ? mision.valor('lon') : '-___.____'}`, 70, h * 0.75, { tam: 56, peso: 600, fuente: MONO });
+      texto(ctx, 'BITÁCORA DE LA MISIÓN', w / 2, h * 0.07, { tam: 46, peso: 700, color: COLOR.acento, alinear: 'center' });
+      texto(ctx, `Piezas: ${mision.cuantas()} de 6`, w / 2, h * 0.14, { tam: 38, color: COLOR.tenue, alinear: 'center' });
+      texto(ctx, 'IP DE ULTRÓN', 50, h * 0.23, { tam: 36, peso: 600, color: COLOR.tenue, fuente: MONO });
+      texto(ctx, mision.ipTexto(), w / 2, h * 0.31, { tam: 66, peso: 600, color: mision.ipCompleta() ? COLOR.texto : COLOR.tenue, alinear: 'center', fuente: MONO });
+      texto(ctx, 'UBICACIÓN GPS', 50, h * 0.41, { tam: 36, peso: 600, color: COLOR.tenue, fuente: MONO });
+      texto(ctx, `Lat  ${mision.tiene('lat') ? mision.valor('lat') : '__.____'}`, 70, h * 0.49, { tam: 52, peso: 600, fuente: MONO });
+      texto(ctx, `Lon ${mision.tiene('lon') ? mision.valor('lon') : '-___.____'}`, 70, h * 0.57, { tam: 52, peso: 600, fuente: MONO });
+      // puntos del equipo: mejor ronda de cada juego y el total
+      ctx.fillStyle = 'rgba(242,244,248,.12)';
+      ctx.fillRect(40, h * 0.63, w - 80, 3);
+      texto(ctx, 'PUNTOS DEL EQUIPO', 50, h * 0.68, { tam: 36, peso: 600, color: COLOR.tenue, fuente: MONO });
+      texto(ctx, String(mision.totalPuntos()), w - 50, h * 0.69, { tam: 70, peso: 800, color: COLOR.texto, alinear: 'right' });
+      texto(ctx, mision.resumenPuntos(), w / 2, h * 0.77, { tam: 34, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
       if (mision.completa()) {
-        texto(ctx, '¡NÚCLEO LOCALIZADO!', w / 2, h * 0.88, { tam: 54, peso: 800, color: COLOR.bien, alinear: 'center' });
+        texto(ctx, '¡NÚCLEO LOCALIZADO!', w / 2, h * 0.9, { tam: 52, peso: 800, color: COLOR.bien, alinear: 'center' });
       } else {
         const sigue = !mision.ipCompleta() ? 'Consigan la IP en los juegos 1 a 3' : 'Ahora: Robot programado → GPS';
-        texto(ctx, sigue, w / 2, h * 0.88, { tam: 38, peso: 600, color: COLOR.acento, alinear: 'center' });
+        texto(ctx, sigue, w / 2, h * 0.9, { tam: 38, peso: 600, color: COLOR.acento, alinear: 'center' });
       }
     });
   },

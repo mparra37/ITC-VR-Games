@@ -289,38 +289,162 @@ AFRAME.registerComponent('cuadricula', {
 /** Consola inclinada frente al jugador (para juegos donde hay que voltear a ver el entorno).
  *  Devuelve la entidad raíz; los juegos ponen sus pantallas dentro. */
 function crearConsola(padre, ancho = 1.6, alto = 0.95) {
-  const raiz = crearEntidad(padre, { position: '0 0.82 -0.85', rotation: '-38 0 0' });
+  // un poco más lejos y más chica que en Enlace VR: así se alcanza sin echarse para atrás
+  const raiz = crearEntidad(padre, { position: '0 0.84 -1.08', rotation: '-34 0 0', scale: '0.86 0.86 0.86' });
   crearEntidad(raiz, { geometry: `primitive: plane; width: ${ancho + 0.04}; height: ${alto + 0.04}`, material: 'shader: flat; color: #ff1638; opacity: 0.35; transparent: true', position: '0 0 -0.012' });
   crearEntidad(raiz, { geometry: `primitive: plane; width: ${ancho}; height: ${alto}`, material: 'shader: flat; color: #050405; opacity: 0.95; transparent: true', position: '0 0 -0.008' });
   return raiz;
 }
 
+// ---------- altura del jugador en VR ----------
+
+/** En el visor, la cámara está a la altura real de la cabeza (sentado ~1.2 m, parado ~1.6 m). Los juegos
+ *  están hechos para los ojos a 1.2 m: al entrar a VR se mide la cabeza y se sube o baja todo el juego
+ *  (paneles, tableros y botones) para que quede a la altura de los ojos. El piso y el fondo no se mueven. */
+AFRAME.registerComponent('ajustar-altura', {
+  schema: { extra: { default: 0 } },
+  init() {
+    this.base = this.el.object3D.position.y + this.data.extra;
+    this.el.object3D.position.y = this.base;
+    const escena = this.el.sceneEl;
+    const medir = () => {
+      if (!escena.is('vr-mode') || !escena.camera) return;
+      const v = new THREE.Vector3();
+      escena.camera.getWorldPosition(v);
+      if (v.y > 0.6 && v.y < 2.3) this.el.object3D.position.y = this.base + Math.max(-0.4, Math.min(0.7, v.y - 1.2));
+    };
+    escena.addEventListener('enter-vr', () => { [500, 1500, 4000].forEach((ms) => setTimeout(medir, ms)); });
+    escena.addEventListener('exit-vr', () => { this.el.object3D.position.y = this.base; });
+    // si la página ya abrió dentro de VR (al cambiar de juego), medir también
+    if (escena.is && escena.is('vr-mode')) [500, 1500].forEach((ms) => setTimeout(medir, ms));
+  },
+});
+
 // ---------- sonido (sin archivos) ----------
 
 const sonido = {
   ctx: null,
-  tono(frecuencia, duracion, tipo = 'sine', volumen = 0.12, retraso = 0) {
+  maestro: null,
+  ruidoBuf: null,
+
+  /** El contexto de audio, con un volumen general (las bocinas del visor suenan bajito). */
+  contexto() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.maestro) {
+      this.maestro = this.ctx.createGain();
+      this.maestro.gain.value = 1.6;
+      const compresor = this.ctx.createDynamicsCompressor();
+      this.maestro.connect(compresor).connect(this.ctx.destination);
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+
+  /** Los navegadores (y el del visor) no dejan sonar nada hasta que la persona toca algo.
+   *  Esto se llama con cualquier toque: mouse, teclado o el gatillo del control en VR. */
+  desbloquear() {
     try {
-      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
-      const t = this.ctx.currentTime + retraso;
-      const osc = this.ctx.createOscillator();
-      const gan = this.ctx.createGain();
+      const ctx = this.contexto();
+      const b = ctx.createBuffer(1, 1, 22050);
+      const s = ctx.createBufferSource();
+      s.buffer = b;
+      s.connect(ctx.destination);
+      s.start(0);
+    } catch (e) { /* sin audio */ }
+  },
+
+  tono(frecuencia, duracion, tipo = 'sine', volumen = 0.12, retraso = 0, hasta = null) {
+    try {
+      const ctx = this.contexto();
+      const t = ctx.currentTime + retraso;
+      const osc = ctx.createOscillator();
+      const gan = ctx.createGain();
       osc.type = tipo;
-      osc.frequency.value = frecuencia;
-      gan.gain.setValueAtTime(volumen, t);
+      osc.frequency.setValueAtTime(frecuencia, t);
+      if (hasta) osc.frequency.exponentialRampToValueAtTime(hasta, t + duracion);
+      gan.gain.setValueAtTime(0.0001, t);
+      gan.gain.exponentialRampToValueAtTime(volumen, t + 0.008);
       gan.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
-      osc.connect(gan).connect(this.ctx.destination);
+      osc.connect(gan).connect(this.maestro);
       osc.start(t);
-      osc.stop(t + duracion);
+      osc.stop(t + duracion + 0.02);
     } catch (e) { /* sin audio, el juego sigue */ }
   },
-  tecla() { this.tono(520, 0.06, 'triangle', 0.08); },
-  paso() { this.tono(300, 0.05, 'square', 0.04); },
-  bien() { this.tono(660, 0.12); this.tono(880, 0.18, 'sine', 0.12, 0.1); },
-  mal() { this.tono(180, 0.4, 'sawtooth', 0.08); },
-  nivel() { [523, 659, 784].forEach((f, i) => this.tono(f, 0.15, 'triangle', 0.1, i * 0.1)); },
-  fin() { [440, 330, 220].forEach((f, i) => this.tono(f, 0.3, 'square', 0.06, i * 0.22)); },
+
+  /** Ruido filtrado (explosiones, agua, aire). */
+  ruido(duracion, { volumen = 0.2, retraso = 0, filtro = 'lowpass', desde = 2000, hasta = 400 } = {}) {
+    try {
+      const ctx = this.contexto();
+      if (!this.ruidoBuf) {
+        this.ruidoBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = this.ruidoBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      const t = ctx.currentTime + retraso;
+      const fuente = ctx.createBufferSource();
+      fuente.buffer = this.ruidoBuf;
+      const f = ctx.createBiquadFilter();
+      f.type = filtro;
+      f.frequency.setValueAtTime(desde, t);
+      f.frequency.exponentialRampToValueAtTime(hasta, t + duracion);
+      const gan = ctx.createGain();
+      gan.gain.setValueAtTime(volumen, t);
+      gan.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
+      fuente.connect(f).connect(gan).connect(this.maestro);
+      fuente.start(t);
+      fuente.stop(t + duracion + 0.05);
+    } catch (e) { /* sin audio */ }
+  },
+
+  // --- los de siempre (más de videojuego) ---
+  tecla() { this.tono(880, 0.05, 'square', 0.05); this.tono(1320, 0.04, 'square', 0.03, 0.03); },
+  paso() { this.tono(220, 0.07, 'square', 0.06, 0, 330); },
+  bien() { this.tono(988, 0.09, 'square', 0.09); this.tono(1319, 0.28, 'square', 0.09, 0.08); },
+  mal() { this.tono(320, 0.18, 'sawtooth', 0.12, 0, 160); this.tono(160, 0.35, 'sawtooth', 0.12, 0.17, 90); },
+  nivel() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.tono(f, 0.12, 'square', 0.07, i * 0.07)); this.tono(1568, 0.4, 'triangle', 0.1, 0.36); },
+  fin() { [784, 659, 523, 392].forEach((f, i) => this.tono(f, 0.22, 'square', 0.08, i * 0.18)); this.tono(196, 0.7, 'triangle', 0.12, 0.72); },
+
+  // --- efectos de cada juego ---
+  /** Router: el paquete sale disparado hacia la puerta. */
+  lanzar() { this.tono(300, 0.35, 'sawtooth', 0.07, 0, 1600); this.ruido(0.35, { volumen: 0.12, filtro: 'bandpass', desde: 600, hasta: 4000 }); },
+  /** Router: el paquete llega a su puerta. */
+  entregado() { this.tono(1047, 0.08, 'square', 0.08); this.tono(1568, 0.2, 'square', 0.08, 0.07); this.tono(2093, 0.25, 'triangle', 0.06, 0.14); },
+  /** Arma: tomar una pieza. */
+  tomar() { this.tono(440, 0.1, 'square', 0.07, 0, 880); },
+  /** Arma: la pieza se conecta en su lugar (clac). */
+  conectar() { this.ruido(0.08, { volumen: 0.25, desde: 3000, hasta: 800 }); this.tono(140, 0.12, 'square', 0.12, 0, 70); this.tono(1760, 0.08, 'square', 0.05, 0.08); },
+  /** Arma: el robot armado se enciende. */
+  encender() { this.tono(80, 1.0, 'sawtooth', 0.08, 0, 640); [523, 784, 1047].forEach((f) => this.tono(f, 0.6, 'square', 0.04, 0.9)); },
+  /** Carrera: el mensaje salta al siguiente escenario. */
+  salto() { this.ruido(1.2, { volumen: 0.14, filtro: 'bandpass', desde: 300, hasta: 3000 }); this.tono(200, 1.1, 'triangle', 0.06, 0, 900); },
+  /** Robot: Ultrón llega bien ("¡listo!"). */
+  listo() { this.tono(1319, 0.07, 'square', 0.07); this.tono(1319, 0.12, 'square', 0.07, 0.11); },
+  /** Robot: Ultrón cae al agua. */
+  splash() { this.ruido(0.9, { volumen: 0.35, desde: 5000, hasta: 300 }); this.tono(260, 0.5, 'sine', 0.12, 0, 70); },
+  /** Robot: Ultrón se reconecta con una antena y escapa (chispazo eléctrico). */
+  escape() {
+    this.tono(1200, 0.5, 'sawtooth', 0.08, 0, 80);
+    [0, 0.08, 0.17, 0.3].forEach((r) => this.ruido(0.06, { volumen: 0.25, retraso: r, filtro: 'highpass', desde: 3000, hasta: 6000 }));
+  },
+  /** Gran final: fanfarria. */
+  victoria() {
+    [[523, 0], [659, 0.1], [784, 0.2], [1047, 0.3], [784, 0.45], [1047, 0.55]].forEach(([f, r]) => this.tono(f, 0.16, 'square', 0.08, r));
+    this.tono(1319, 0.8, 'square', 0.07, 0.7);
+  },
 };
+
+// desbloquear el audio con el primer toque (mouse, teclado, pantalla o gatillo del control en VR)
+['pointerdown', 'touchstart', 'keydown', 'click'].forEach((ev) => window.addEventListener(ev, () => sonido.desbloquear(), { capture: true }));
+document.addEventListener('DOMContentLoaded', () => {
+  const escena = document.querySelector('a-scene');
+  if (!escena) return;
+  escena.addEventListener('enter-vr', () => {
+    const sesion = escena.xrSession || (escena.renderer && escena.renderer.xr && escena.renderer.xr.getSession && escena.renderer.xr.getSession());
+    if (!sesion) return;
+    // el gatillo del control en VR sí cuenta como "tocar" para el navegador: ahí se prende el audio
+    ['selectstart', 'select', 'squeezestart'].forEach((ev) => sesion.addEventListener(ev, () => sonido.desbloquear()));
+  });
+});
 
 // ---------- música de fondo (sin archivos) ----------
 //
@@ -353,9 +477,7 @@ const musica = {
   iniciar() {
     if (!this.encendida() || this.reloj) return;
     try {
-      sonido.ctx = sonido.ctx || new (window.AudioContext || window.webkitAudioContext)();
-      this.ctx = sonido.ctx;
-      if (this.ctx.state === 'suspended') this.ctx.resume();
+      this.ctx = sonido.contexto();
       const t = this.ctx.currentTime;
       this.maestro = this.ctx.createGain();
       this.maestro.gain.setValueAtTime(0.0001, t);
@@ -457,35 +579,55 @@ window.addEventListener('keydown', (e) => {
 
 // El código de verificación y el envío a Google Sheets están en js/marcador.js.
 
-/** Recuadro de la pista de la misión (IP o GPS de Ultrón) al final de la ronda. Ver js/mision.js. */
-function dibujarPista(ctx, x, y, w, h, pista) {
+/** Recuadro de la pista de la misión (IP o GPS de Ultrón) al final de la ronda, con el código a la derecha. */
+function dibujarPista(ctx, x, y, w, h, pista, registro) {
   rectRedondo(ctx, x, y, w, h, 18);
   ctx.fillStyle = pista.ok ? '#1E0D12' : '#1A1408';
   ctx.fill();
   ctx.lineWidth = 4;
   ctx.strokeStyle = pista.ok ? COLOR.acento : COLOR.mal;
   ctx.stroke();
+  const ancho = registro && registro.codigo ? w * 0.64 : w;
   if (pista.ok) {
-    texto(ctx, pista.titulo, x + 36, y + h * 0.25, { tam: h * 0.17, peso: 600, color: COLOR.acento, fuente: MONO });
-    texto(ctx, pista.valor, x + 36, y + h * 0.58, { tam: h * 0.32, peso: 600, color: COLOR.texto, fuente: MONO });
-    texto(ctx, 'Anótenla en su bitácora', x + 36, y + h * 0.86, { tam: h * 0.15, color: COLOR.tenue });
+    texto(ctx, pista.titulo, x + 32, y + h * 0.25, { tam: h * 0.17, peso: 600, color: COLOR.acento, fuente: MONO });
+    texto(ctx, pista.valor, x + 32, y + h * 0.58, { tam: h * 0.3, peso: 600, color: COLOR.texto, fuente: MONO });
+    texto(ctx, 'Anótenla en su bitácora', x + 32, y + h * 0.86, { tam: h * 0.14, color: COLOR.tenue });
   } else {
-    texto(ctx, 'PISTA BLOQUEADA', x + 36, y + h * 0.28, { tam: h * 0.2, peso: 700, color: COLOR.mal, fuente: MONO });
-    texto(ctx, pista.falta, x + 36, y + h * 0.62, { tam: h * 0.19, peso: 600, color: COLOR.texto });
+    texto(ctx, 'PISTA BLOQUEADA', x + 32, y + h * 0.3, { tam: h * 0.19, peso: 700, color: COLOR.mal, fuente: MONO });
+    const partes = pista.falta.split('. ');
+    texto(ctx, partes[0] + (partes.length > 1 ? '.' : ''), x + 32, y + h * 0.58, { tam: h * 0.15, peso: 600, color: COLOR.texto });
+    if (partes[1]) texto(ctx, partes.slice(1).join('. '), x + 32, y + h * 0.8, { tam: h * 0.15, peso: 600, color: COLOR.texto });
+  }
+  if (registro && registro.codigo) {
+    // separador y código de verificación (para el marcador del profesor y JARVIS)
+    const cx = x + ancho;
+    ctx.fillStyle = 'rgba(242,244,248,.15)';
+    ctx.fillRect(cx, y + h * 0.15, 3, h * 0.7);
+    const equipo = registro.equipo ? `EQUIPO ${registro.equipo} · CÓDIGO` : 'CÓDIGO (elijan equipo en el menú)';
+    texto(ctx, equipo, cx + 28, y + h * 0.3, { tam: h * 0.14, peso: 600, color: COLOR.tenue, fuente: MONO });
+    texto(ctx, registro.codigo, cx + 28, y + h * 0.66, { tam: h * 0.27, peso: 600, color: COLOR.acento, fuente: MONO });
   }
 }
 
 /** Pantalla final de las rondas cronometradas (igual en todos los juegos). */
 function dibujarFinalRonda(ctx, w, h, { practica, puntaje, unidad, detalle, registro }) {
   fondoPanel(ctx, w, h);
-  texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.09, { tam: 54, peso: 700, color: COLOR.acento, alinear: 'center' });
-  texto(ctx, practica ? 'Puntaje de práctica (no da pistas)' : 'Resultado de la ronda', w / 2, h * 0.2, { tam: 44, peso: 700, color: COLOR.bien, alinear: 'center' });
-  texto(ctx, `${puntaje}`, w / 2, h * 0.36, { tam: 140, peso: 700, alinear: 'center' });
-  texto(ctx, unidad, w / 2, h * 0.5, { tam: 38, color: COLOR.tenue, alinear: 'center' });
-  texto(ctx, detalle, w / 2, h * 0.58, { tam: 32, color: COLOR.tenue, alinear: 'center' });
-  const pista = !practica && registro && registro.pista;
-  if (pista) dibujarPista(ctx, 40, h * 0.64, w - 80, h * 0.24, pista);
-  texto(ctx, 'Operador: quítate el visor con las dos manos y pásalo al siguiente', w / 2, pista ? h * 0.94 : h * 0.8, { tam: 32, peso: 600, alinear: 'center', color: COLOR.tenue });
+  texto(ctx, practica ? 'PRÁCTICA TERMINADA' : '¡TIEMPO!', w / 2, h * 0.08, { tam: 52, peso: 700, color: COLOR.acento, alinear: 'center' });
+  texto(ctx, practica ? 'Puntaje de práctica (no da pistas ni puntos)' : 'Resultado de la ronda', w / 2, h * 0.17, { tam: 40, peso: 700, color: COLOR.bien, alinear: 'center' });
+  texto(ctx, `${puntaje}`, w / 2, h * 0.3, { tam: 120, peso: 700, alinear: 'center' });
+  texto(ctx, unidad, w / 2, h * 0.42, { tam: 36, color: COLOR.tenue, alinear: 'center' });
+  texto(ctx, detalle, w / 2, h * 0.49, { tam: 28, color: COLOR.tenue, alinear: 'center' });
+  const ronda = !practica && registro;
+  if (ronda && registro.total !== undefined) {
+    // los puntos del equipo (mejor ronda de cada juego) y el total para comparar al final
+    rectRedondo(ctx, 40, h * 0.54, w - 80, h * 0.13, 14);
+    ctx.fillStyle = '#160A0D';
+    ctx.fill();
+    texto(ctx, `TOTAL DEL EQUIPO: ${registro.total}`, 70, h * 0.605, { tam: 42, peso: 600, color: COLOR.texto });
+    texto(ctx, registro.resumen, w - 70, h * 0.605, { tam: 27, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
+  }
+  if (ronda && registro.pista) dibujarPista(ctx, 40, h * 0.7, w - 80, h * 0.2, registro.pista, registro);
+  texto(ctx, 'Anoten puntaje y código en la bitácora · el visor se pasa con las dos manos', w / 2, ronda ? h * 0.95 : h * 0.8, { tam: 28, peso: 600, alinear: 'center', color: COLOR.tenue });
 }
 
 /** Todas las rondas: arrancar y parar la música, y acelerarla en los últimos 30 segundos. */

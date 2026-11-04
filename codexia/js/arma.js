@@ -1,13 +1,13 @@
 /* CODEXIA · Ghost Network · Arma a Ultrón (edición de Arma la computadora)
  *
- * Atraparon un robot de Ultrón en pedazos. Enfrente está su chasis con 8 lugares numerados: 4 de afuera
- * (cabeza, dos brazos distintos y piernas: fáciles) y 4 de adentro, en el pecho (núcleo, cerebro,
- * batería y módulo de red). Hay 3 modelos (A Explorador, B Guardián, C Infiltrado) y el visor NO dice
- * cuál es: el Operador describe los detalles del chasis (hombros y emblema de la cintura) y las piezas
+ * Atraparon un robot de Ultrón: su cuerpo está completo, pero le sacaron lo de adentro. Enfrente está con el
+ * pecho abierto y 8 lugares numerados para sus piezas (núcleo, procesador, memorias, batería, ventilador,
+ * módulo de red y tarjeta de video). Hay 3 modelos (A Explorador, B Guardián, C Infiltrado) y el visor NO dice
+ * cuál es: el Operador describe los detalles de afuera (hombros, emblema del pecho y el lado del brazo cañón) y las piezas
  * que ya están puestas, y el equipo adivina el modelo con su manual. Luego, como siempre: el Operador
  * toma una pieza, la describe, y la pone en el número que le digan.
  *
- * 1.er robot: solo faltan las 4 piezas de afuera · 2.º: 6 · desde el 3.º: 7 (siempre queda una puesta).
+ * 1.er robot: faltan 4 piezas · 2.º: 6 · desde el 3.º: 7 (siempre queda una puesta).
  * +1 por pieza bien puesta; lugar equivocado o saltar: bloqueo de 5 segundos. Ronda de 5 minutos.
  * Datos y dibujos: js/ultron_datos.js (lo genera prototipo_papel/generar_codexia.py a partir de ultron.json).
  */
@@ -45,55 +45,86 @@ function dibujarFicha(ctx, img, x, y, lado, { borde = 'rgba(11,31,58,.35)', gros
   if (img) ctx.drawImage(img, x + lado * 0.08, y + lado * 0.08, lado * 0.84, lado * 0.84);
 }
 
-/** El chasis de Ultrón: torso, hombros y emblema (los detalles que distinguen a cada modelo). */
+/** El robot de Ultrón por fuera (ya armado) con el pecho abierto. Lo que distingue a cada modelo:
+ *  los hombros, el emblema del centro del pecho y de qué lado tiene el brazo cañón.
+ *  Coordenadas de 1000 × 969 (igual que svg_chasis en prototipo_papel/generar_codexia.py). */
 function dibujarChasis(ctx, w, h, detalle) {
-  const k = w / 1000;
   ctx.save();
-  ctx.scale(k, h / 969);
+  ctx.scale(w / 1000, h / 969);
   const metal = '#4A505B';
   const orilla = '#9AA1AD';
   const placa = '#353A43';
   ctx.lineJoin = 'round';
-  const trazo = (relleno, grosor = 8) => {
+  ctx.lineCap = 'round';
+  const trazo = (relleno, grosor = 6) => {
     ctx.fillStyle = relleno;
     ctx.fill();
     ctx.lineWidth = grosor;
     ctx.strokeStyle = orilla;
     ctx.stroke();
   };
-  // cuello, torso y cintura
-  ctx.beginPath(); ctx.rect(450, 185, 100, 40); trazo(metal, 6);
-  ctx.beginPath(); ctx.moveTo(265, 225); ctx.lineTo(735, 225); ctx.lineTo(685, 725); ctx.lineTo(315, 725); ctx.closePath(); trazo(metal);
-  ctx.beginPath(); ctx.moveTo(330, 728); ctx.lineTo(670, 728); ctx.lineTo(640, 800); ctx.lineTo(360, 800); ctx.closePath(); trazo(placa, 6);
-  // hombros
-  [235, 765].forEach((x) => {
-    ctx.beginPath();
-    if (detalle.hombros === 'redondos') ctx.arc(x, 265, 70, 0, Math.PI * 2);
-    else if (detalle.hombros === 'con picos') {
-      ctx.moveTo(x - 75, 315); ctx.lineTo(x - 45, 205); ctx.lineTo(x, 260); ctx.lineTo(x + 45, 205); ctx.lineTo(x + 75, 315); ctx.closePath();
-    } else rectRedondo(ctx, x - 72, 205, 144, 110, 8);
-    trazo(placa);
+  const rojo = (fn) => { ctx.fillStyle = COLOR.acento; ctx.beginPath(); fn(); ctx.fill(); };
+  // piernas
+  [[360, 450], [550, 640]].forEach(([x1, x2]) => {
+    ctx.beginPath(); ctx.rect(x1, 815, x2 - x1, 112); trazo(metal);
+    ctx.beginPath(); rectRedondo(ctx, x1 - 16, 925, x2 - x1 + 32, 36, 8); trazo(placa);
+    rojo(() => ctx.arc((x1 + x2) / 2, 868, 16, 0, Math.PI * 2));
   });
-  // la escotilla abierta del pecho
-  rectRedondo(ctx, 330, 250, 340, 440, 20);
-  ctx.fillStyle = '#111317';
-  ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = 'rgba(255, 22, 56, .45)';
-  ctx.stroke();
-  // emblema de la cintura
-  const [cx, cy] = [500, 762];
-  const r = 34;
-  ctx.fillStyle = COLOR.acento;
-  ctx.shadowColor = COLOR.acento;
-  ctx.shadowBlur = 18;
+  // brazos: uno con garra y otro cañón (el lado cambia según el modelo)
+  const brazo = (x, canon) => {
+    ctx.beginPath(); rectRedondo(ctx, x - 44, 285, 88, 300, 24); trazo(metal);
+    rojo(() => ctx.arc(x, 598, 24, 0, Math.PI * 2));
+    if (canon) {
+      ctx.beginPath(); rectRedondo(ctx, x - 40, 622, 80, 118, 12); trazo(placa);
+      ctx.strokeStyle = orilla; ctx.lineWidth = 4;
+      [652, 682].forEach((y) => { ctx.beginPath(); ctx.moveTo(x - 30, y); ctx.lineTo(x + 30, y); ctx.stroke(); });
+      rojo(() => ctx.ellipse(x, 742, 30, 11, 0, 0, Math.PI * 2));
+    } else {
+      ctx.beginPath(); rectRedondo(ctx, x - 34, 622, 68, 48, 10); trazo(placa);
+      [-1, 0, 1].forEach((k) => {
+        ctx.beginPath(); ctx.moveTo(x + k * 16, 668); ctx.lineTo(x + k * 42, 752);
+        ctx.lineWidth = 18; ctx.strokeStyle = orilla; ctx.stroke();
+        ctx.lineWidth = 10; ctx.strokeStyle = metal; ctx.stroke();
+      });
+    }
+  };
+  brazo(150, detalle.canon === 'izquierda');
+  brazo(850, detalle.canon !== 'izquierda');
+  // cabeza con picos y ojos rojos
   ctx.beginPath();
-  if (detalle.emblema === 'círculo') ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
-  else if (detalle.emblema === 'triángulo') { ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy + r * 0.7); ctx.lineTo(cx - r, cy + r * 0.7); ctx.closePath(); } else {
-    for (let i = 0; i < 6; i++) ctx.lineTo(cx + r * Math.cos(i * Math.PI / 3), cy + r * Math.sin(i * Math.PI / 3));
-    ctx.closePath();
-  }
-  ctx.fill();
+  ctx.moveTo(432, 58); ctx.lineTo(450, 18); ctx.lineTo(470, 48); ctx.lineTo(500, 8); ctx.lineTo(530, 48); ctx.lineTo(550, 18); ctx.lineTo(568, 58);
+  ctx.closePath(); trazo(placa, 5);
+  ctx.beginPath(); ctx.moveTo(420, 58); ctx.lineTo(580, 58); ctx.lineTo(566, 150); ctx.lineTo(500, 182); ctx.lineTo(434, 150); ctx.closePath(); trazo(metal);
+  ctx.beginPath(); rectRedondo(ctx, 446, 84, 108, 44, 10); ctx.fillStyle = '#111317'; ctx.fill();
+  rojo(() => { ctx.moveTo(452, 94); ctx.lineTo(494, 112); ctx.lineTo(452, 120); ctx.closePath(); });
+  rojo(() => { ctx.moveTo(548, 94); ctx.lineTo(506, 112); ctx.lineTo(548, 120); ctx.closePath(); });
+  ctx.beginPath(); ctx.rect(470, 180, 60, 26); trazo(placa, 5);
+  // torso con el pecho abierto
+  ctx.beginPath(); rectRedondo(ctx, 215, 200, 570, 572, 40); trazo(metal, 8);
+  ctx.beginPath(); rectRedondo(ctx, 236, 220, 528, 532, 26); ctx.fillStyle = '#111317'; ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255, 22, 56, .45)'; ctx.stroke();
+  // cinturón
+  ctx.beginPath(); rectRedondo(ctx, 300, 776, 400, 40, 10); trazo(placa, 5);
+  // hombros (encima de los brazos)
+  [175, 825].forEach((x) => {
+    ctx.beginPath();
+    if (detalle.hombros === 'redondos') ctx.arc(x, 245, 72, 0, Math.PI * 2);
+    else if (detalle.hombros === 'con picos') {
+      ctx.moveTo(x - 80, 300); ctx.lineTo(x - 50, 180); ctx.lineTo(x, 238); ctx.lineTo(x + 50, 180); ctx.lineTo(x + 80, 300); ctx.closePath();
+    } else rectRedondo(ctx, x - 76, 188, 152, 112, 10);
+    trazo(placa, 7);
+  });
+  // emblema en el centro del pecho
+  const [cx, cy, r] = [500, 480, 52];
+  ctx.shadowColor = COLOR.acento;
+  ctx.shadowBlur = 24;
+  rojo(() => {
+    if (detalle.emblema === 'círculo') ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
+    else if (detalle.emblema === 'triángulo') { ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy + r * 0.72); ctx.lineTo(cx - r, cy + r * 0.72); ctx.closePath(); } else {
+      for (let i = 0; i < 6; i++) ctx.lineTo(cx + r * Math.cos(i * Math.PI / 3), cy + r * Math.sin(i * Math.PI / 3));
+      ctx.closePath();
+    }
+  });
   ctx.restore();
 }
 
@@ -243,7 +274,7 @@ AFRAME.registerComponent('arma-computadora', {
     this.botonTerminar.setAttribute('visible', modo === 'practica');
     this.mostrar('juego');
     this.nuevaPlaca();
-    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin pistas' : '¡Ya! Descríbanle al equipo los hombros y el emblema', COLOR.acento);
+    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin pistas' : '¡Ya! Describan hombros, emblema y el lado del cañón', COLOR.acento);
     sonido.nivel();
     rondaComun.empezar(modo);
   },
@@ -253,10 +284,8 @@ AFRAME.registerComponent('arma-computadora', {
     const letras = Object.keys(this.datos.modelos).filter((l) => !this.placa || l !== this.placa.modelo);
     const modelo = azarDe(letras);
     const libres = this.datos.abiertas[Math.min(this.armadas, this.datos.abiertas.length - 1)];
-    // el primero, solo las piezas de afuera (fáciles); después, al azar, pero siempre queda una puesta
-    const abiertas = this.armadas === 0 && this.datos.primeras
-      ? new Set(this.datos.primeras)
-      : new Set(barajar([...Array(8).keys()]).slice(0, Math.min(libres, 7)));
+    // lugares libres al azar; siempre queda al menos una pieza puesta
+    const abiertas = new Set(barajar([...Array(8).keys()]).slice(0, Math.min(libres, 7)));
     this.placa = { modelo, orden: this.datos.modelos[modelo], abiertas, puestas: new Set() };
     this.seleccion = null;
     const faltan = [...abiertas].map((n) => this.placa.orden[n]);
@@ -279,7 +308,7 @@ AFRAME.registerComponent('arma-computadora', {
   tomar(id) {
     if (!this.placa || !this.piezas[id].el.getAttribute('visible')) return;
     this.seleccion = id;
-    sonido.tecla();
+    sonido.tomar();
     this.avisar('Descríbanla: forma, colores y qué tiene', COLOR.acento);
     this.dibujarPiezas();
     this.dibujarInfo();
@@ -298,7 +327,7 @@ AFRAME.registerComponent('arma-computadora', {
     const id = this.seleccion;
     if (placa.orden[n] === id) {
       this.puntaje += 1;
-      sonido.bien();
+      sonido.tomar();
       this.avisar(`¡Listo: ${this.nombreDe(id).toLowerCase()} en el ${n + 1}! · +1`, COLOR.bien);
       const P = CONFIG.placa;
       const [lx, ly] = this.datos.lugares[n];
@@ -320,6 +349,7 @@ AFRAME.registerComponent('arma-computadora', {
     this.vuelo = null;
     this.piezas[id].el.setAttribute('visible', false);
     this.placa.puestas.add(n);
+    sonido.conectar();
     this.seleccion = null;
     this.mostrar(this.pantalla);
     if (this.placa.puestas.size === this.placa.abiertas.size) {
@@ -327,7 +357,7 @@ AFRAME.registerComponent('arma-computadora', {
       this.encendida = { hasta: performance.now() + CONFIG.segundosEncendida * 1000 };
       const d = this.datos.detalles[this.placa.modelo];
       this.avisar(`¡Robot armado! Era el modelo ${this.placa.modelo} · ${d.nombre}`, COLOR.bien);
-      sonido.nivel();
+      sonido.encender();
     }
     this.redibujarTodo();
   },
@@ -457,8 +487,8 @@ AFRAME.registerComponent('arma-computadora', {
       } else {
         texto(ctx, '¿QUÉ MODELO ES?', 50, 64, { tam: 52, peso: 700, color: COLOR.acento });
         texto(ctx, `Faltan: ${placa.abiertas.size - placa.puestas.size}`, w - 50, 64, { tam: 48, peso: 600, color: COLOR.tenue, alinear: 'right' });
-        texto(ctx, 'Miren hombros, emblema', 50, 130, { tam: 36, color: COLOR.tenue });
-        texto(ctx, 'y lo que ya está puesto', 50, 172, { tam: 36, color: COLOR.tenue });
+        texto(ctx, 'Miren los hombros, el emblema', 40, 130, { tam: 32, color: COLOR.tenue });
+        texto(ctx, 'y el lado del cañón', 40, 168, { tam: 32, color: COLOR.tenue });
       }
       this.datos.lugares.forEach(([lx, ly], n) => {
         const cx = lx * w;
@@ -498,11 +528,11 @@ AFRAME.registerComponent('arma-computadora', {
 
   dibujarInicio() {
     pintar(this.lienzoTitulo, (ctx, w, h) => {
-      texto(ctx, `MISIÓN: armen el robot de Ultrón para leer su memoria · ${window.MISION.juegos.arma.minimo} piezas = 3.er número de la IP`, w / 2, h * 0.08, { tam: 32, color: COLOR.acento, peso: 600, alinear: 'center' });
+      texto(ctx, `MISIÓN: reconecten el interior del robot de Ultrón · ${window.MISION.juegos.arma.minimo} piezas = 3.er número de la IP`, w / 2, h * 0.08, { tam: 32, color: COLOR.acento, peso: 600, alinear: 'center' });
       texto(ctx, 'Arma a Ultrón', w / 2, h * 0.25, { tam: 92, peso: 700, alinear: 'center' });
-      texto(ctx, 'Hay 3 modelos y no te decimos cuál es: el equipo lo adivina con su manual.', w / 2, h * 0.43, { tam: 36, color: COLOR.tenue, alinear: 'center' });
+      texto(ctx, 'Le sacaron lo de adentro: reconéctalo. Hay 3 modelos y el equipo adivina cuál es.', w / 2, h * 0.43, { tam: 34, color: COLOR.tenue, alinear: 'center' });
       const pasos = [
-        '1. Describe los hombros, el emblema y lo que ya está puesto.',
+        '1. Describe hombros, emblema y de qué lado está el cañón.',
         '2. Voltea, toma una pieza y descríbela.',
         '3. Ponla en el número que te digan.',
       ];
@@ -549,7 +579,7 @@ AFRAME.registerComponent('arma-computadora', {
         texto(ctx, '¿Modelo A, B o C?', x, h * 0.14, { tam: 52, peso: 700, color: COLOR.acento });
         const pasos = this.seleccion
           ? ['Descríbele la pieza al equipo:', 'forma, colores y qué tiene.', 'Apunta al número que te digan', 'y presiona el gatillo.']
-          : ['1. Describe hombros y emblema.', '2. Voltea, apunta a una pieza', '    y presiona el gatillo.', '3. Descríbela al equipo.'];
+          : ['1. Describe hombros, emblema y cañón.', '2. Voltea, apunta a una pieza', '    y presiona el gatillo.', '3. Descríbela al equipo.'];
         pasos.forEach((p, i) => texto(ctx, p, x, h * (0.34 + i * 0.15), { tam: 40, peso: 500, color: this.seleccion && i < 2 ? COLOR.texto : COLOR.tenue }));
       }
       const restante = (this.bloqueoHasta - performance.now()) / 1000;

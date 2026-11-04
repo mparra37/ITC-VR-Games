@@ -99,7 +99,7 @@
       <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 6; lineColor: #FF1638"></a-entity>
       <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 6; lineColor: #FF1638"></a-entity>
     </a-entity>
-    <a-entity menu-juegos></a-entity>
+    <a-entity menu-juegos ajustar-altura></a-entity>
   </a-scene>
 
   <div id="menu-web">
@@ -115,12 +115,14 @@
         <button id="entrar-vr" class="boton principal" type="button">Entrar a la misión en VR</button>
         <button id="ver-videos" class="boton" type="button">▶ Ver los videos</button>
         <a class="boton" href="guia.html">Guía del taller</a>
+      <a class="boton" href="marcador.html">Marcador de equipos</a>
       </div>
 
       <section class="bitacora" aria-live="polite">
         <h2><span>BITÁCORA DE ESTE VISOR</span><button id="nuevo-equipo" class="boton chico" type="button">Nuevo equipo</button></h2>
         <div class="dato-mision"><div class="etq">IP DE ULTRÓN</div><div class="valor" id="ip"></div></div>
         <div class="dato-mision"><div class="etq">UBICACIÓN GPS (LAT, LON)</div><div class="valor" id="gps"></div></div>
+        <div class="dato-mision"><div class="etq">PUNTOS DEL EQUIPO (MEJOR RONDA DE CADA JUEGO)</div><div class="valor" id="puntos"></div><div class="etq" id="puntos-detalle" style="margin-top:4px"></div></div>
         <div class="estado-mision" id="estado-mision"></div>
       </section>
 
@@ -160,6 +162,8 @@
       ip.textContent = mision.ipTexto();
       ip.classList.toggle('falta', !mision.ipCompleta());
       gps.textContent = mision.gpsTexto();
+      document.getElementById('puntos').textContent = `${mision.totalPuntos()} puntos`;
+      document.getElementById('puntos-detalle').textContent = mision.resumenPuntos();
       gps.classList.toggle('falta', !(mision.tiene('lat') && mision.tiene('lon')));
       const estado = document.getElementById('estado-mision');
       estado.classList.toggle('lista', mision.completa());
@@ -171,7 +175,7 @@
     pintarBitacora();
     document.addEventListener('codexia-pista', pintarBitacora);
     document.getElementById('nuevo-equipo').addEventListener('click', () => {
-      if (confirm('¿Borrar la IP y el GPS de este visor para un equipo nuevo?')) mision.reiniciar();
+      if (confirm('¿Borrar la IP, el GPS y los puntos de este visor para un equipo nuevo?')) mision.reiniciar();
     });
 
     // videos

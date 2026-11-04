@@ -214,6 +214,7 @@ AFRAME.registerComponent('carrera-palabras', {
     const etapas = window.VIAJE || [];
     const n = etapas.length ? this.salto % etapas.length : 0;
     if (window.ambienteViaje) window.ambienteViaje.ir(n);
+    setTimeout(() => sonido.salto(), 250);
     if (n === 0 && etapas.length && !subioNivel) {
       this.avisar('¡Rastreo completo! Ultrón cambió de ruta: empiecen otra vez · +1', COLOR.bien);
     }

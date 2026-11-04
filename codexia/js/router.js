@@ -322,7 +322,7 @@ AFRAME.registerComponent('router-humano', {
     this.explicar(correcto);
     if (correcto) {
       this.puntaje += 1;
-      sonido.bien();
+      sonido.lanzar();
       this.avisar(`¡Entregado en ${nombre}! · +1`, COLOR.bien);
       this.lanzamiento = { inicio: performance.now(), hasta: puerta.el.object3D.position.clone(), puerta };
       this.dibujarBarra();
@@ -336,6 +336,7 @@ AFRAME.registerComponent('router-humano', {
 
   terminarLanzamiento() {
     this.lanzamiento = null;
+    sonido.entregado();
     const nivelNuevo = Math.min(CONFIG.nivelMaximo, 1 + Math.floor(this.puntaje / CONFIG.aciertosPorNivel));
     if (nivelNuevo > this.nivel) {
       this.nivel = nivelNuevo;
