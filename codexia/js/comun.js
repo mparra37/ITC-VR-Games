@@ -296,6 +296,32 @@ function crearConsola(padre, ancho = 1.6, alto = 0.95) {
   return raiz;
 }
 
+// ---------- salir a medio juego ----------
+
+/** Salir a medio juego pide presionar DOS veces el mismo botón en menos de 3 segundos, para que un toque
+ *  por error en VR no saque al equipo. El botón cambia a "¿Seguro? Otra vez". Devuelve true al confirmar. */
+function confirmarDosVeces(juego, accion, boton) {
+  const ahora = performance.now();
+  const previo = juego._confirmar;
+  if (previo && previo.accion === accion && ahora < previo.hasta) {
+    juego._confirmar = null;
+    if (boton) boton.setAttribute('boton', 'texto', previo.texto);
+    return true;
+  }
+  if (previo && previo.boton) previo.boton.setAttribute('boton', 'texto', previo.texto);
+  const texto = boton ? boton.getAttribute('boton').texto : '';
+  const pendiente = { accion, hasta: ahora + 3000, boton, texto };
+  juego._confirmar = pendiente;
+  if (boton) boton.setAttribute('boton', 'texto', '¿Seguro? Otra vez');
+  setTimeout(() => {
+    if (juego._confirmar !== pendiente) return;
+    juego._confirmar = null;
+    if (boton) boton.setAttribute('boton', 'texto', texto);
+  }, 3000);
+  sonido.tecla();
+  return false;
+}
+
 // ---------- altura del jugador en VR ----------
 
 /** En el visor, la cámara está a la altura real de la cabeza (sentado ~1.2 m, parado ~1.6 m). Los juegos

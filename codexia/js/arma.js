@@ -184,6 +184,9 @@ AFRAME.registerComponent('arma-computadora', {
     this.lienzoMensaje = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.08', position: '0 -0.22 0' });
     this.crearBoton('juego', 'Saltar robot', -0.4, -0.36, { ancho: 0.36, alto: 0.1, accion: 'saltar' });
     this.botonTerminar = this.crearBoton('juego', 'Terminar', 0.02, -0.36, { ancho: 0.32, alto: 0.1, accion: 'terminar' });
+    // por si empezaron por error: salir sin guardar o ir al menú (piden dos toques)
+    this.botonSalir = this.crearBoton('juego', '✕ Salir', 0.39, -0.36, { ancho: 0.3, alto: 0.1, accion: 'salir' });
+    this.botonMenuJuego = this.crearBoton('juego', 'Menú', 0.66, -0.36, { ancho: 0.2, alto: 0.1, accion: 'menuJuego' });
 
     const fin = this.pantallas.fin;
     this.lienzoResultado = crearEntidad(fin, { lienzo: 'ancho: 1.5; alto: 0.66', position: '0 0.1 0' });
@@ -234,6 +237,15 @@ AFRAME.registerComponent('arma-computadora', {
 
   presionar(accion, valor) {
     if (accion === 'menu') return irA('index.html');
+    if (accion === 'salir' || accion === 'menuJuego') {
+      const boton = accion === 'salir' ? this.botonSalir : this.botonMenuJuego;
+      if (!confirmarDosVeces(this, accion, boton)) {
+        this.avisar(accion === 'salir' ? 'Presiona otra vez para salir sin guardar la ronda' : 'Presiona otra vez para ir al menú (la ronda no se guarda)', COLOR.mal);
+        return null;
+      }
+      if (accion === 'menuJuego') return irA('index.html');
+      return this.salir();
+    }
     if (accion === 'empezar' || accion === 'practicar') {
       this.empezar(accion === 'practicar' ? 'practica' : 'ronda');
     } else if (accion === 'nueva') {
@@ -342,6 +354,20 @@ AFRAME.registerComponent('arma-computadora', {
       this.bloquear(`Esa pieza no va en el ${n + 1}`);
       this.dibujarPiezas();
     }
+  },
+
+  /** Salir a medio juego: no se guarda la ronda, se esconden las piezas y se regresa al inicio. */
+  salir() {
+    if (this.vuelo) {
+      this.piezas[this.vuelo.id].el.object3D.position.copy(this.piezas[this.vuelo.id].casa);
+      this.vuelo = null;
+    }
+    this.encendida = null;
+    this.registro = null;
+    rondaComun.terminar();
+    this.dibujarInicio();
+    this.mostrar('inicio');
+    return null;
   },
 
   terminarVuelo() {

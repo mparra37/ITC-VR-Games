@@ -15,7 +15,7 @@ Dirección: `https://mparra37.github.io/ITC-VR-Games/codexia/`
 
 | Archivo | Qué es |
 | --- | --- |
-| `index.html` | Menú web y 3D, con la **Bitácora** del visor (IP, GPS y puntos del equipo) y el botón **Nuevo equipo** |
+| `index.html` | Menú web y 3D, con la **Bitácora** del visor (IP, GPS y puntos del equipo) y el botón **Nuevo equipo** (en el visor, debajo de la bitácora; dos toques). En cada juego, **✕ Salir** (al inicio sin guardar) y **Menú**, también con dos toques |
 | `marcador.html` | **Marcador de equipos**: se pegan los códigos que anotan los equipos y suma la mejor ronda de cada juego; se puede proyectar |
 | `guia.html` | Guía del taller (guion de 40 min) y descargas |
 | `js/mision.js` | **La IP y el GPS de Ultrón** (valores de ejemplo: cámbienlos aquí), los mínimos de cada juego y el avance guardado en el visor |

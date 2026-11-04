@@ -169,7 +169,7 @@
       estado.classList.toggle('lista', mision.completa());
       estado.textContent = mision.completa()
         ? '¡Núcleo localizado! Anoten la IP y el GPS en su bitácora de papel y llévenlos al reto final.'
-        : mision.ipCompleta() ? 'IP completa. Ahora jueguen Robot programado para conseguir el GPS.'
+        : mision.ipCompleta() ? 'IP completa. Ahora jueguen la Misión final para conseguir el GPS.'
           : `Piezas: ${mision.cuantas()} de 6. Ganen la IP en los juegos 1, 2 y 3.`;
     };
     pintarBitacora();

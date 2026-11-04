@@ -170,6 +170,9 @@ AFRAME.registerComponent('router-humano', {
     this.lienzoMensaje = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.08', position: '0 -0.22 0' });
     this.crearBoton('juego', 'Saltar', -0.4, -0.36, { ancho: 0.32, alto: 0.1, accion: 'saltar' });
     this.botonTerminar = this.crearBoton('juego', 'Terminar', 0, -0.36, { ancho: 0.32, alto: 0.1, accion: 'terminar' });
+    // por si empezaron por error: salir sin guardar o ir al menú (piden dos toques)
+    this.botonSalir = this.crearBoton('juego', '✕ Salir', 0.37, -0.36, { ancho: 0.3, alto: 0.1, accion: 'salir' });
+    this.botonMenuJuego = this.crearBoton('juego', 'Menú', 0.64, -0.36, { ancho: 0.2, alto: 0.1, accion: 'menuJuego' });
 
     const fin = this.pantallas.fin;
     this.lienzoResultado = crearEntidad(fin, { lienzo: 'ancho: 1.5; alto: 0.66', position: '0 0.1 0' });
@@ -247,6 +250,15 @@ AFRAME.registerComponent('router-humano', {
 
   presionar(accion, valor) {
     if (accion === 'menu') return irA('index.html');
+    if (accion === 'salir' || accion === 'menuJuego') {
+      const boton = accion === 'salir' ? this.botonSalir : this.botonMenuJuego;
+      if (!confirmarDosVeces(this, accion, boton)) {
+        this.avisar(accion === 'salir' ? 'Presiona otra vez para salir sin guardar la ronda' : 'Presiona otra vez para ir al menú (la ronda no se guarda)', COLOR.mal);
+        return null;
+      }
+      if (accion === 'menuJuego') return irA('index.html');
+      return this.salir();
+    }
     if (accion === 'empezar' || accion === 'practicar') {
       this.empezar(accion === 'practicar' ? 'practica' : 'ronda');
     } else if (accion === 'nueva') {
@@ -332,6 +344,18 @@ AFRAME.registerComponent('router-humano', {
       this.bloquear(`Ese paquete no va a ${nombre}`);
     }
     this.dibujarInfo();
+  },
+
+  /** Salir a medio juego: no se guarda la ronda y se regresa a la pantalla de inicio. */
+  salir() {
+    this.lanzamiento = null;
+    this.registro = null;
+    rondaComun.terminar();
+    this.paqueteEl.object3D.position.copy(this.casaPaquete);
+    this.paqueteEl.object3D.visible = true;
+    this.dibujarInicio();
+    this.mostrar('inicio');
+    return null;
   },
 
   terminarLanzamiento() {

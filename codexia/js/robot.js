@@ -328,6 +328,9 @@ AFRAME.registerComponent('robot-programado', {
     this.lienzoInstruccion = crearEntidad(this.consola, { lienzo: 'ancho: 0.78; alto: 0.26', position: '-0.24 0.02 0' });
     this.botonMover = b('juego', '▶ Mover', 0.42, 0.04, 0.4, 'mover', '', 'principal', 0.2);
     this.botonTerminar = b('juego', 'Terminar', 0.42, -0.2, 0.26, 'terminar', '', 'tecla', 0.08);
+    // por si empezaron por error: salir sin guardar o ir al menú (piden dos toques)
+    this.botonSalir = b('juego', '✕ Salir', -0.44, -0.22, 0.28, 'salir', '', 'tecla', 0.08);
+    this.botonMenuJuego = b('juego', 'Menú', -0.14, -0.22, 0.24, 'menuJuego', '', 'tecla', 0.08);
     b('inicio', 'Práctica', -0.42, -0.06, 0.36, 'practicar', '', 'tecla', 0.15);
     b('inicio', `Empezar misión · ${this.datos.minutos_ronda} min`, 0.06, -0.06, 0.52, 'empezar', '', 'principal', 0.15);
     b('inicio', 'Menú', 0.49, -0.06, 0.26, 'menu', '', 'tecla', 0.15);
@@ -601,6 +604,18 @@ AFRAME.registerComponent('robot-programado', {
     this.mostrar('fin');
   },
 
+  /** Salir a medio juego: no se guarda la ronda y se regresa a la pantalla de inicio. */
+  salir() {
+    this.animacion = null;
+    this.revelar = null;
+    this.destino = null;
+    this.registro = null;
+    this.robot.visible = true;
+    this.rayo.visible = false;
+    rondaComun.terminar();
+    this.mostrar('inicio');
+  },
+
   /** Al llegar a la meta: fanfarria fuerte para que todo el equipo la oiga. */
   fanfarria() {
     sonido.victoria();
@@ -608,6 +623,13 @@ AFRAME.registerComponent('robot-programado', {
 
   presionar(accion, valor) {
     if (accion === 'menu') return irA('index.html');
+    if (accion === 'salir' || accion === 'menuJuego') {
+      const boton = accion === 'salir' ? this.botonSalir : this.botonMenuJuego;
+      if (!confirmarDosVeces(this, accion, boton)) return;
+      if (accion === 'menuJuego') { irA('index.html'); return; }
+      this.salir();
+      return;
+    }
     if (accion === 'practicar') return this.empezar('practica');
     if (accion === 'empezar') return this.empezar('ronda');
     if (accion === 'nueva') {

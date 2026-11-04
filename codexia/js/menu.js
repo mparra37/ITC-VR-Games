@@ -5,7 +5,7 @@
  * - el menú 3D dentro del visor (se elige con el láser del control)
  * Para agregar un juego nuevo, basta con agregarlo a MINIJUEGOS.
  */
-/* global mision, MISION, dibujarCodexia, AFRAME, COLOR, MONO, texto, rectRedondo, pintar, sonido, crearEntidad, refrescarApuntadores, dibujarLogo, marcador, musica */
+/* global confirmarDosVeces, mision, MISION, dibujarCodexia, AFRAME, COLOR, MONO, texto, rectRedondo, pintar, sonido, crearEntidad, refrescarApuntadores, dibujarLogo, marcador, musica */
 
 window.MINIJUEGOS = [
   { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Ultrón inunda la red. Lean la IP de cada paquete y mándenlo a su lugar: núcleo, fábrica, presa…', nivel: 'Media · 3 min', voltear: true, video: 'videos/reel_router.mp4', pista: '1.º y 2.º número de la IP' },
@@ -55,6 +55,8 @@ AFRAME.registerComponent('menu-juegos', {
     this.bitacora = crearEntidad(this.el, { lienzo: 'ancho: 0.9; alto: 1.08', position: '1.62 1.38 -1.15', rotation: '0 -45 0' });
     this.dibujarBitacora();
     document.addEventListener('codexia-pista', () => this.dibujarBitacora());
+    // cuando llega otro equipo: borra IP, GPS y puntos de este visor (pide dos toques)
+    this.botonNuevo = crearEntidad(this.el, { position: '1.62 0.75 -1.15', rotation: '0 -45 0', class: 'clickable', boton: { texto: 'Nuevo equipo', ancho: 0.5, alto: 0.11, accion: 'nuevoEquipo' } });
 
     this.cargando = crearEntidad(panel, { lienzo: 'ancho: 2; alto: 0.12', position: '0 -0.79 0' });
     this.dibujarPie('Apunta a un juego y presiona el gatillo  ·  Juega sentado');
@@ -113,6 +115,14 @@ AFRAME.registerComponent('menu-juegos', {
         sonido.bien();
         this.dibujarPie(`Listo: este visor es del equipo ${valor}`);
         document.dispatchEvent(new CustomEvent('enlace-equipo'));
+      } else if (accion === 'nuevoEquipo') {
+        if (!confirmarDosVeces(this, 'nuevoEquipo', this.botonNuevo)) {
+          this.dibujarPie('¿Equipo nuevo? Presiona otra vez: se borran IP, GPS y puntos de este visor');
+          return;
+        }
+        mision.reiniciar();
+        sonido.nivel();
+        this.dibujarPie('Visor listo para un equipo nuevo: elijan su número de equipo abajo');
       } else if (accion === 'musica') {
         musica.ponerEncendida(!musica.encendida());
         this.botonMusica.setAttribute('boton', 'texto', musica.encendida() ? 'Música: sí' : 'Música: no');
@@ -147,7 +157,7 @@ AFRAME.registerComponent('menu-juegos', {
       if (mision.completa()) {
         texto(ctx, '¡NÚCLEO LOCALIZADO!', w / 2, h * 0.9, { tam: 52, peso: 800, color: COLOR.bien, alinear: 'center' });
       } else {
-        const sigue = !mision.ipCompleta() ? 'Consigan la IP en los juegos 1 a 3' : 'Ahora: Robot programado → GPS';
+        const sigue = !mision.ipCompleta() ? 'Consigan la IP en los juegos 1 a 3' : 'Ahora: Misión final → GPS';
         texto(ctx, sigue, w / 2, h * 0.9, { tam: 38, peso: 600, color: COLOR.acento, alinear: 'center' });
       }
     });

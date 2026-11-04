@@ -86,6 +86,9 @@ AFRAME.registerComponent('carrera-palabras', {
     this.crearBoton('juego', 'Saltar', -0.28, -0.87, { ancho: 0.36, alto: 0.14, accion: 'saltar' });
     this.botonTerminar = this.crearBoton('juego', 'Terminar', 0.14, -0.87, { ancho: 0.36, alto: 0.14, accion: 'terminar' });
     this.crearBoton('juego', 'Enviar', 0.64, -0.87, { ancho: 0.5, alto: 0.14, accion: 'enviar', estilo: 'principal' });
+    // a la derecha del panel: salir sin guardar o ir al menú (piden dos toques)
+    this.botonSalir = this.crearBoton('juego', '✕ Salir', 1.31, 0.55, { ancho: 0.3, alto: 0.13, accion: 'salir' });
+    this.botonMenuJuego = this.crearBoton('juego', 'Menú', 1.31, 0.38, { ancho: 0.3, alto: 0.13, accion: 'menuJuego' });
 
     // pantalla final
     const fin = this.pantallas.fin;
@@ -113,6 +116,15 @@ AFRAME.registerComponent('carrera-palabras', {
 
   presionar(accion, valor) {
     if (accion === 'menu') return irA('index.html');
+    if (accion === 'salir' || accion === 'menuJuego') {
+      const boton = accion === 'salir' ? this.botonSalir : this.botonMenuJuego;
+      if (!confirmarDosVeces(this, accion, boton)) {
+        this.avisar(accion === 'salir' ? 'Presiona otra vez para salir sin guardar la ronda' : 'Presiona otra vez para ir al menú (la ronda no se guarda)', COLOR.mal);
+        return null;
+      }
+      if (accion === 'menuJuego') return irA('index.html');
+      return this.salir();
+    }
     if (accion === 'empezar' || accion === 'practicar') {
       this.empezar(accion === 'practicar' ? 'practica' : 'ronda');
     } else if (accion === 'nueva') {
@@ -219,6 +231,16 @@ AFRAME.registerComponent('carrera-palabras', {
       this.avisar('¡Rastreo completo! Ultrón cambió de ruta: empiecen otra vez · +1', COLOR.bien);
     }
     this.dibujarViaje();
+  },
+
+  /** Salir a medio juego: no se guarda la ronda y se regresa a la pantalla de inicio. */
+  salir() {
+    this.registro = null;
+    rondaComun.terminar();
+    if (window.ambienteViaje) window.ambienteViaje.ir(0);
+    this.dibujarInicio();
+    this.mostrar('inicio');
+    return null;
   },
 
   bloquear(motivo) {
