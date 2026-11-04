@@ -2,7 +2,7 @@
  *
  * Cada juego da una pieza cuando el equipo termina una RONDA (no la práctica) con el puntaje mínimo:
  *   Router humano        → los 2 primeros números de la IP
- *   Arma la computadora  → el 3.er número de la IP
+ *   Arma a Ultrón        → el 3.er número de la IP
  *   Carrera de palabras  → el 4.º número de la IP
  *   Robot programado     → la latitud (1.ª vez que Ultrón cae al agua) y la longitud (2.ª vez)
  * El avance se guarda en el visor (cada equipo tiene el suyo). "Nuevo equipo" en el menú lo borra.
@@ -16,7 +16,7 @@ window.MISION = {
   gps: { lat: '29.0729', lon: '-110.9559' },
   juegos: {
     router: { nombre: 'Router humano', minimo: 3, unidad: 'paquetes entregados', partes: ['ip1', 'ip2'] },
-    arma: { nombre: 'Arma la computadora', minimo: 4, unidad: 'piezas puestas', partes: ['ip3'] },
+    arma: { nombre: 'Arma a Ultrón', minimo: 4, unidad: 'piezas puestas', partes: ['ip3'] },
     carrera: { nombre: 'Carrera de palabras', minimo: 3, unidad: 'palabras descifradas', partes: ['ip4'] },
     robot: { nombre: 'Robot programado', minimo: 1, unidad: 'veces que Ultrón cayó al agua', partes: ['lat', 'lon'] },
   },

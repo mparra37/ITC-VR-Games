@@ -1,14 +1,15 @@
-/* CODEXIA · Ghost Network (edición de Enlace VR) · Arma la computadora (rompecabezas guiado)
+/* CODEXIA · Ghost Network · Arma a Ultrón (edición de Arma la computadora)
  *
- * Enfrente hay una placa con lugares numerados (modelo A, B o C). Las piezas que faltan flotan
- * alrededor del Operador como dibujos SIN nombre. El Operador toma una pieza (la apunta y presiona el
- * gatillo), se la describe al equipo, y el equipo, con el catálogo y el plano armado de esa placa
- * (Manual de campo), le dice en qué número va. El Operador apunta a ese número y la pieza vuela a su lugar.
- * Al completar la placa, la computadora "se enciende" y muestra el nombre de cada pieza.
+ * Atraparon un robot de Ultrón en pedazos. Enfrente está su chasis con 8 lugares numerados: 4 de afuera
+ * (cabeza, dos brazos distintos y piernas: fáciles) y 4 de adentro, en el pecho (núcleo, cerebro,
+ * batería y módulo de red). Hay 3 modelos (A Explorador, B Guardián, C Infiltrado) y el visor NO dice
+ * cuál es: el Operador describe los detalles del chasis (hombros y emblema de la cintura) y las piezas
+ * que ya están puestas, y el equipo adivina el modelo con su manual. Luego, como siempre: el Operador
+ * toma una pieza, la describe, y la pone en el número que le digan.
  *
- * 1.ª placa: 4 lugares libres · 2.ª: 6 · desde la 3.ª: los 8. +1 por pieza bien puesta;
- * lugar equivocado o saltar: bloqueo de 5 segundos. Ronda de 5 minutos.
- * Datos y dibujos: js/computadora_datos.js (lo genera prototipo_papel/generar_arma.py).
+ * 1.er robot: solo faltan las 4 piezas de afuera · 2.º: 6 · desde el 3.º: 7 (siempre queda una puesta).
+ * +1 por pieza bien puesta; lugar equivocado o saltar: bloqueo de 5 segundos. Ronda de 5 minutos.
+ * Datos y dibujos: js/ultron_datos.js (lo genera prototipo_papel/generar_codexia.py a partir de ultron.json).
  */
 /* global AFRAME, THREE, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, crearConsola, imagenSVG, azarConSemilla, irA, marcador, rondaComun, dibujarFinalRonda */
 
@@ -19,7 +20,7 @@ const CONFIG = {
   radioPiezas: 2.1,
   tamPieza: 0.46,
   // la placa (metros): centro, ancho y alto, y tamaño de cada lugar
-  placa: { x: 0, y: 1.9, z: -2.4, ancho: 2, alto: 1.3, lugar: 0.26 },
+  placa: { x: 0, y: 2.02, z: -2.4, ancho: 1.6, alto: 1.55, lugar: 0.26 },
 };
 
 // lugares alrededor del jugador (grados, + = derecha) y altura. Todos quedan ARRIBA de la altura de
@@ -42,6 +43,58 @@ function dibujarFicha(ctx, img, x, y, lado, { borde = 'rgba(11,31,58,.35)', gros
   ctx.strokeStyle = borde;
   ctx.stroke();
   if (img) ctx.drawImage(img, x + lado * 0.08, y + lado * 0.08, lado * 0.84, lado * 0.84);
+}
+
+/** El chasis de Ultrón: torso, hombros y emblema (los detalles que distinguen a cada modelo). */
+function dibujarChasis(ctx, w, h, detalle) {
+  const k = w / 1000;
+  ctx.save();
+  ctx.scale(k, h / 969);
+  const metal = '#4A505B';
+  const orilla = '#9AA1AD';
+  const placa = '#353A43';
+  ctx.lineJoin = 'round';
+  const trazo = (relleno, grosor = 8) => {
+    ctx.fillStyle = relleno;
+    ctx.fill();
+    ctx.lineWidth = grosor;
+    ctx.strokeStyle = orilla;
+    ctx.stroke();
+  };
+  // cuello, torso y cintura
+  ctx.beginPath(); ctx.rect(450, 185, 100, 40); trazo(metal, 6);
+  ctx.beginPath(); ctx.moveTo(265, 225); ctx.lineTo(735, 225); ctx.lineTo(685, 725); ctx.lineTo(315, 725); ctx.closePath(); trazo(metal);
+  ctx.beginPath(); ctx.moveTo(330, 728); ctx.lineTo(670, 728); ctx.lineTo(640, 800); ctx.lineTo(360, 800); ctx.closePath(); trazo(placa, 6);
+  // hombros
+  [235, 765].forEach((x) => {
+    ctx.beginPath();
+    if (detalle.hombros === 'redondos') ctx.arc(x, 265, 70, 0, Math.PI * 2);
+    else if (detalle.hombros === 'con picos') {
+      ctx.moveTo(x - 75, 315); ctx.lineTo(x - 45, 205); ctx.lineTo(x, 260); ctx.lineTo(x + 45, 205); ctx.lineTo(x + 75, 315); ctx.closePath();
+    } else rectRedondo(ctx, x - 72, 205, 144, 110, 8);
+    trazo(placa);
+  });
+  // la escotilla abierta del pecho
+  rectRedondo(ctx, 330, 250, 340, 440, 20);
+  ctx.fillStyle = '#111317';
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(255, 22, 56, .45)';
+  ctx.stroke();
+  // emblema de la cintura
+  const [cx, cy] = [500, 762];
+  const r = 34;
+  ctx.fillStyle = COLOR.acento;
+  ctx.shadowColor = COLOR.acento;
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  if (detalle.emblema === 'círculo') ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
+  else if (detalle.emblema === 'triángulo') { ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy + r * 0.7); ctx.lineTo(cx - r, cy + r * 0.7); ctx.closePath(); } else {
+    for (let i = 0; i < 6; i++) ctx.lineTo(cx + r * Math.cos(i * Math.PI / 3), cy + r * Math.sin(i * Math.PI / 3));
+    ctx.closePath();
+  }
+  ctx.fill();
+  ctx.restore();
 }
 
 AFRAME.registerComponent('arma-computadora', {
@@ -98,7 +151,7 @@ AFRAME.registerComponent('arma-computadora', {
     this.lienzoBarra = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.12', position: '0 0.38 0' });
     this.lienzoInfo = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.46', position: '0 0.07 0' });
     this.lienzoMensaje = crearEntidad(jue, { lienzo: 'ancho: 1.5; alto: 0.08', position: '0 -0.22 0' });
-    this.crearBoton('juego', 'Saltar placa', -0.4, -0.36, { ancho: 0.36, alto: 0.1, accion: 'saltar' });
+    this.crearBoton('juego', 'Saltar robot', -0.4, -0.36, { ancho: 0.36, alto: 0.1, accion: 'saltar' });
     this.botonTerminar = this.crearBoton('juego', 'Terminar', 0.02, -0.36, { ancho: 0.32, alto: 0.1, accion: 'terminar' });
 
     const fin = this.pantallas.fin;
@@ -161,7 +214,7 @@ AFRAME.registerComponent('arma-computadora', {
       if (accion === 'lugar') this.poner(valor);
       if (accion === 'saltar') {
         this.saltados += 1;
-        this.bloquear('Saltaste la placa');
+        this.bloquear('Saltaste el robot');
         this.nuevaPlaca();
       }
     }
@@ -190,7 +243,7 @@ AFRAME.registerComponent('arma-computadora', {
     this.botonTerminar.setAttribute('visible', modo === 'practica');
     this.mostrar('juego');
     this.nuevaPlaca();
-    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Díganle al equipo el modelo de la placa', COLOR.acento);
+    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin pistas' : '¡Ya! Descríbanle al equipo los hombros y el emblema', COLOR.acento);
     sonido.nivel();
     rondaComun.empezar(modo);
   },
@@ -200,7 +253,10 @@ AFRAME.registerComponent('arma-computadora', {
     const letras = Object.keys(this.datos.modelos).filter((l) => !this.placa || l !== this.placa.modelo);
     const modelo = azarDe(letras);
     const libres = this.datos.abiertas[Math.min(this.armadas, this.datos.abiertas.length - 1)];
-    const abiertas = new Set(barajar([...Array(8).keys()]).slice(0, libres));
+    // el primero, solo las piezas de afuera (fáciles); después, al azar, pero siempre queda una puesta
+    const abiertas = this.armadas === 0 && this.datos.primeras
+      ? new Set(this.datos.primeras)
+      : new Set(barajar([...Array(8).keys()]).slice(0, Math.min(libres, 7)));
     this.placa = { modelo, orden: this.datos.modelos[modelo], abiertas, puestas: new Set() };
     this.seleccion = null;
     const faltan = [...abiertas].map((n) => this.placa.orden[n]);
@@ -243,7 +299,7 @@ AFRAME.registerComponent('arma-computadora', {
     if (placa.orden[n] === id) {
       this.puntaje += 1;
       sonido.bien();
-      this.avisar(`¡${this.nombreDe(id)} instalada en el ${n + 1}! · +1`, COLOR.bien);
+      this.avisar(`¡Listo: ${this.nombreDe(id).toLowerCase()} en el ${n + 1}! · +1`, COLOR.bien);
       const P = CONFIG.placa;
       const [lx, ly] = this.datos.lugares[n];
       const destino = new THREE.Vector3(P.x + (lx - 0.5) * P.ancho, P.y + (0.5 - ly) * P.alto, P.z + 0.05);
@@ -269,7 +325,8 @@ AFRAME.registerComponent('arma-computadora', {
     if (this.placa.puestas.size === this.placa.abiertas.size) {
       this.armadas += 1;
       this.encendida = { hasta: performance.now() + CONFIG.segundosEncendida * 1000 };
-      this.avisar('¡Computadora armada! Se enciende…', COLOR.bien);
+      const d = this.datos.detalles[this.placa.modelo];
+      this.avisar(`¡Robot armado! Era el modelo ${this.placa.modelo} · ${d.nombre}`, COLOR.bien);
       sonido.nivel();
     }
     this.redibujarTodo();
@@ -333,7 +390,7 @@ AFRAME.registerComponent('arma-computadora', {
     if (this.encendida && ahora > this.encendida.hasta) {
       this.encendida = null;
       this.nuevaPlaca();
-      this.avisar(`Nueva placa: modelo ${this.placa.modelo} · ${this.placa.abiertas.size} lugares libres`, COLOR.acento);
+      this.avisar(`Otro robot: ¿qué modelo es? · ${this.placa.abiertas.size} lugares libres`, COLOR.acento);
     }
     if (this.modo === 'ronda' && ahora >= this.finRonda) {
       this.terminar();
@@ -385,28 +442,24 @@ AFRAME.registerComponent('arma-computadora', {
       ctx.lineWidth = 6;
       ctx.strokeStyle = this.encendida ? COLOR.bien : 'rgba(242,244,248,.25)';
       ctx.stroke();
-      // pistas de circuito de adorno
-      const azar = azarConSemilla(11);
-      ctx.strokeStyle = 'rgba(255, 22, 56,.14)';
-      ctx.lineWidth = 5;
-      for (let i = 0; i < 26; i++) {
-        let x = azar() * w;
-        let y = azar() * h;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        x += (azar() - 0.5) * 500;
-        ctx.lineTo(x, y);
-        y += (azar() - 0.5) * 300;
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
       if (!placa) {
-        texto(ctx, 'ARMA LA COMPUTADORA', w / 2, h * 0.45, { tam: 110, peso: 700, alinear: 'center' });
-        texto(ctx, 'Aquí aparecerá la placa', w / 2, h * 0.6, { tam: 56, color: COLOR.tenue, alinear: 'center' });
+        dibujarChasis(ctx, w, h, { hombros: 'redondos', emblema: 'círculo' });
+        texto(ctx, 'ARMA A ULTRÓN', w / 2, h * 0.47, { tam: 110, peso: 700, alinear: 'center' });
+        texto(ctx, 'Aquí aparecerá el robot', w / 2, h * 0.58, { tam: 52, color: COLOR.tenue, alinear: 'center' });
         return;
       }
-      texto(ctx, `PLACA MODELO ${placa.modelo}`, 60, 70, { tam: 64, peso: 700, color: COLOR.texto });
-      texto(ctx, this.encendida ? '¡COMPUTADORA ARMADA!' : `Lugares libres: ${placa.abiertas.size - placa.puestas.size}`, w - 60, 70, { tam: 48, peso: 600, color: this.encendida ? COLOR.bien : COLOR.tenue, alinear: 'right' });
+      const detalle = this.datos.detalles[placa.modelo];
+      dibujarChasis(ctx, w, h, detalle);
+      if (this.encendida) {
+        texto(ctx, '¡ROBOT ARMADO!', 40, 64, { tam: 44, peso: 700, color: COLOR.bien });
+        texto(ctx, `Modelo ${placa.modelo}`, w - 40, 64, { tam: 48, peso: 700, color: COLOR.texto, alinear: 'right' });
+        texto(ctx, detalle.nombre, w - 40, 118, { tam: 40, peso: 600, color: COLOR.tenue, alinear: 'right' });
+      } else {
+        texto(ctx, '¿QUÉ MODELO ES?', 50, 64, { tam: 52, peso: 700, color: COLOR.acento });
+        texto(ctx, `Faltan: ${placa.abiertas.size - placa.puestas.size}`, w - 50, 64, { tam: 48, peso: 600, color: COLOR.tenue, alinear: 'right' });
+        texto(ctx, 'Miren hombros, emblema', 50, 130, { tam: 36, color: COLOR.tenue });
+        texto(ctx, 'y lo que ya está puesto', 50, 172, { tam: 36, color: COLOR.tenue });
+      }
       this.datos.lugares.forEach(([lx, ly], n) => {
         const cx = lx * w;
         const cy = ly * h;
@@ -416,7 +469,7 @@ AFRAME.registerComponent('arma-computadora', {
         if (llena) {
           const recien = placa.puestas.has(n);
           dibujarFicha(ctx, this.imagenes[placa.orden[n]], x, y, lado, { borde: recien ? COLOR.bien : 'rgba(242,244,248,.4)', grosor: recien ? 8 : 4 });
-          if (this.encendida) texto(ctx, this.nombreDe(placa.orden[n]), cx, y + lado + 38, { tam: 36, peso: 600, color: COLOR.texto, alinear: 'center' });
+          if (this.encendida) texto(ctx, this.nombreDe(placa.orden[n]), cx, y + lado + 30, { tam: 30, peso: 700, color: COLOR.texto, alinear: 'center' });
         } else {
           rectRedondo(ctx, x, y, lado, lado, lado * 0.1);
           ctx.fillStyle = this.encima === n ? 'rgba(255, 22, 56,.28)' : 'rgba(255, 22, 56,.08)';
@@ -445,15 +498,15 @@ AFRAME.registerComponent('arma-computadora', {
 
   dibujarInicio() {
     pintar(this.lienzoTitulo, (ctx, w, h) => {
-      texto(ctx, `MISIÓN: armen la computadora que rastrea a Ultrón · ${window.MISION.juegos.arma.minimo} piezas = 3.er número de la IP`, w / 2, h * 0.08, { tam: 34, color: COLOR.acento, peso: 600, alinear: 'center' });
-      texto(ctx, 'Arma la computadora', w / 2, h * 0.25, { tam: 92, peso: 700, alinear: 'center' });
-      texto(ctx, 'Un rompecabezas: el equipo tiene el plano de la computadora armada.', w / 2, h * 0.43, { tam: 38, color: COLOR.tenue, alinear: 'center' });
+      texto(ctx, `MISIÓN: armen el robot de Ultrón para leer su memoria · ${window.MISION.juegos.arma.minimo} piezas = 3.er número de la IP`, w / 2, h * 0.08, { tam: 32, color: COLOR.acento, peso: 600, alinear: 'center' });
+      texto(ctx, 'Arma a Ultrón', w / 2, h * 0.25, { tam: 92, peso: 700, alinear: 'center' });
+      texto(ctx, 'Hay 3 modelos y no te decimos cuál es: el equipo lo adivina con su manual.', w / 2, h * 0.43, { tam: 36, color: COLOR.tenue, alinear: 'center' });
       const pasos = [
-        '1. Dile al equipo el modelo de la placa (A, B o C).',
+        '1. Describe los hombros, el emblema y lo que ya está puesto.',
         '2. Voltea, toma una pieza y descríbela.',
         '3. Ponla en el número que te digan.',
       ];
-      pasos.forEach((p, i) => texto(ctx, p, w * 0.12, h * (0.58 + i * 0.13), { tam: 42, peso: 500 }));
+      pasos.forEach((p, i) => texto(ctx, p, w * 0.08, h * (0.58 + i * 0.13), { tam: 40, peso: 500 }));
     });
     pintar(this.lienzoSeguridad, (ctx, w, h) => {
       fondoPanel(ctx, w, h, '#1a0b10');
@@ -464,7 +517,7 @@ AFRAME.registerComponent('arma-computadora', {
   dibujarBarra() {
     pintar(this.lienzoBarra, (ctx, w, h) => {
       fondoPanel(ctx, w, h);
-      texto(ctx, 'ARMA LA COMPUTADORA', 30, h / 2, { tam: 42, peso: 700 });
+      texto(ctx, 'ARMA A ULTRÓN', 30, h / 2, { tam: 42, peso: 700 });
       texto(ctx, `Piezas: ${this.puntaje}`, w * 0.66, h / 2, { tam: 44, peso: 700, alinear: 'center' });
       if (this.modo === 'practica') {
         texto(ctx, 'PRÁCTICA', w - 30, h / 2, { tam: 42, peso: 700, color: COLOR.acento, alinear: 'right' });
@@ -493,10 +546,10 @@ AFRAME.registerComponent('arma-computadora', {
       }
       const x = 80 + lado;
       if (this.placa) {
-        texto(ctx, `Placa modelo ${this.placa.modelo}`, x, h * 0.14, { tam: 52, peso: 700, color: COLOR.acento });
+        texto(ctx, '¿Modelo A, B o C?', x, h * 0.14, { tam: 52, peso: 700, color: COLOR.acento });
         const pasos = this.seleccion
           ? ['Descríbele la pieza al equipo:', 'forma, colores y qué tiene.', 'Apunta al número que te digan', 'y presiona el gatillo.']
-          : ['1. Voltea y busca una pieza.', '2. Apúntale y presiona el gatillo', '    para tomarla.', '3. Descríbela al equipo.'];
+          : ['1. Describe hombros y emblema.', '2. Voltea, apunta a una pieza', '    y presiona el gatillo.', '3. Descríbela al equipo.'];
         pasos.forEach((p, i) => texto(ctx, p, x, h * (0.34 + i * 0.15), { tam: 40, peso: 500, color: this.seleccion && i < 2 ? COLOR.texto : COLOR.tenue }));
       }
       const restante = (this.bloqueoHasta - performance.now()) / 1000;
@@ -521,8 +574,8 @@ AFRAME.registerComponent('arma-computadora', {
     pintar(this.lienzoResultado, (ctx, w, h) => dibujarFinalRonda(ctx, w, h, {
       practica: this.modo === 'practica',
       puntaje: this.puntaje,
-      unidad: this.puntaje === 1 ? 'pieza instalada' : 'piezas instaladas',
-      detalle: `Computadoras armadas: ${this.armadas} · Errores: ${this.errores} · Placas saltadas: ${this.saltados}`,
+      unidad: this.puntaje === 1 ? 'pieza puesta' : 'piezas puestas',
+      detalle: `Robots armados: ${this.armadas} · Errores: ${this.errores} · Saltados: ${this.saltados}`,
       registro: this.registro,
     }));
   },

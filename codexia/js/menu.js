@@ -8,9 +8,9 @@
 /* global mision, MISION, dibujarCodexia, AFRAME, COLOR, MONO, texto, rectRedondo, pintar, sonido, crearEntidad, refrescarApuntadores, dibujarLogo, marcador, musica */
 
 window.MINIJUEGOS = [
-  { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Ultrón inunda la red con paquetes. Lean la IP de cada uno y mándenlo por la puerta correcta.', nivel: 'Media · 3 min', voltear: true, video: 'videos/reel_router.mp4', pista: '1.º y 2.º número de la IP' },
-  { archivo: 'arma.html', area: 'Hardware', titulo: 'Arma la computadora', texto: 'Armen la computadora que rastrea a Ultrón: el equipo tiene el plano y guía cada pieza.', nivel: 'Fácil · 5 min', voltear: true, video: 'videos/reel_arma.mp4', pista: '3.er número de la IP' },
-  { archivo: 'carrera.html', area: 'Binario · agua', titulo: 'Carrera de palabras', texto: 'Descifren los mensajes de Ultrón en binario. Cada palabra trae un consejo para cuidar el agua.', nivel: 'Media · 3 min', voltear: false, video: 'videos/reel_carrera.mp4', pista: '4.º número de la IP' },
+  { archivo: 'router.html', area: 'Redes', titulo: 'Router humano', texto: 'Ultrón inunda la red. Lean la IP de cada paquete y mándenlo a su lugar: núcleo, fábrica, presa…', nivel: 'Media · 3 min', voltear: true, video: 'videos/reel_router.mp4', pista: '1.º y 2.º número de la IP' },
+  { archivo: 'arma.html', area: 'Robótica', titulo: 'Arma a Ultrón', texto: 'Armen un robot de Ultrón por fuera y por dentro. Primero adivinen el modelo por sus detalles.', nivel: 'Fácil · 5 min', voltear: true, video: 'videos/reel_arma.mp4', pista: '3.er número de la IP' },
+  { archivo: 'carrera.html', area: 'Binario · agua', titulo: 'Carrera de palabras', texto: 'Descifren los mensajes de Ultrón en binario. Cada palabra trae un consejo para cuidar el agua.', nivel: 'Media · 5 min', voltear: false, video: 'videos/reel_carrera.mp4', pista: '4.º número de la IP' },
   { archivo: 'robot.html', area: 'Misión final', titulo: 'Robot programado', texto: 'Con la IP hackean a Ultrón. El equipo tiene el mapa: guíenlo paso a paso hasta que caiga al agua.', nivel: 'Media · 5 min', voltear: false, video: 'videos/reel_robot.mp4', pista: 'Ubicación GPS' },
 ];
 

@@ -1,5 +1,8 @@
 /* CODEXIA · Ghost Network (edición de Enlace VR) · Router humano · los cuartos detrás de cada puerta
  *
+ * Edición CODEXIA: además de los cuartos de Enlace VR, el núcleo de Ultrón, la fábrica de drones, la presa,
+ * la planta de agua, las antenas y la cuarentena (ver el final del archivo).
+ *
  * Cada puerta es un marco de color y, detrás, un cuarto pequeño en 3D (como una casa de muñecas)
  * que se ve a través del marco: el salón con pizarrón y pupitres, la biblioteca con libreros, el
  * planeta con sus conexiones (internet), el cuarto de servidores con luces que parpadean, el
@@ -576,6 +579,346 @@ function cuartoBasura(grupo) {
   };
 }
 
+// ---------- cuartos de la edición CODEXIA (el mundo de Ultrón) ----------
+
+/** Pared metálica oscura con remaches y una franja del color dado. */
+function paredMetal(color) {
+  return (c, w, h) => {
+    pared(c, w, h, '#2A2E36', '#121418');
+    c.strokeStyle = 'rgba(255,255,255,.06)';
+    c.lineWidth = 3;
+    for (let x = 0; x < w; x += 128) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    c.fillStyle = 'rgba(255,255,255,.12)';
+    for (let x = 16; x < w; x += 128) for (let y = 20; y < h; y += 90) { c.beginPath(); c.arc(x, y, 4, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = color;
+    c.globalAlpha = 0.55;
+    c.fillRect(0, h * 0.72, w, 10);
+    c.globalAlpha = 1;
+    sombraOrillas(c, w, h, 0.55);
+  };
+}
+
+const pisoMetal = (c, w, h) => {
+  losetas(c, w, h, 64, '#30343C', '#2A2E35', '#181A1F');
+  sombraOrillas(c, w, h, 0.5);
+};
+
+/** Núcleo de Ultrón: una esfera roja que late, con anillos que giran, y su "ojo" en la pared. */
+function cuartoNucleo(grupo) {
+  cascaron(grupo, {
+    fondo: texturaDe(512, 608, (c, w, h) => {
+      pared(c, w, h, '#1C0F12', '#070304');
+      // el ojo rasgado de Ultrón
+      c.fillStyle = '#FF1638';
+      c.shadowColor = '#FF1638';
+      c.shadowBlur = 30;
+      c.beginPath(); c.moveTo(90, 150); c.lineTo(230, 205); c.lineTo(90, 215); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(422, 150); c.lineTo(282, 205); c.lineTo(422, 215); c.closePath(); c.fill();
+      c.shadowBlur = 0;
+      sombraOrillas(c, w, h, 0.6);
+    }),
+    izquierda: texturaDe(512, 512, paredMetal('#FF1638')),
+    piso: texturaDe(512, 608, (c, w, h) => {
+      pisoMetal(c, w, h);
+      c.strokeStyle = 'rgba(255,22,56,.7)';
+      c.lineWidth = 6;
+      [80, 130, 180].forEach((r) => { c.beginPath(); c.arc(w / 2, h * 0.45, r, 0, Math.PI * 2); c.stroke(); });
+    }),
+    techo: texturaDe(256, 256, (c, w, h) => { c.fillStyle = '#0A0506'; c.fillRect(0, 0, w, h); }),
+  });
+  const centro = new THREE.Vector3(0, PISO + 0.42, -0.5);
+  cilindro(grupo, [0.12, 0.16, 0.1], [centro.x, PISO + 0.05, centro.z], mate(0x2A2E36));
+  const nucleo = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 16), luz(0xff1638));
+  nucleo.position.copy(centro);
+  const brillo = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 14), luz(0xff1638, { transparent: true, opacity: 0.18, depthWrite: false }));
+  brillo.position.copy(centro);
+  grupo.add(nucleo, brillo);
+  const anillos = [0.2, 0.26].map((r, i) => {
+    const a = new THREE.Mesh(new THREE.TorusGeometry(r, 0.008, 6, 48), luz(i ? 0x8a9099 : 0xff6b7d));
+    a.position.copy(centro);
+    grupo.add(a);
+    return a;
+  });
+  // cables que llegan al núcleo
+  [-0.3, 0.3].forEach((x) => bloque(grupo, [0.02, 0.02, 0.5], [x, PISO + 0.02, -0.5], luz(0xff1638)));
+  grupo.userData.animar = (t) => {
+    const s = t / 1000;
+    const k = 1 + Math.sin(s * 3) * 0.08;
+    nucleo.scale.setScalar(k);
+    brillo.scale.setScalar(k * 1.1);
+    anillos[0].rotation.set(s * 0.9, s * 0.5, 0);
+    anillos[1].rotation.set(-s * 0.6, 0, s * 0.8);
+  };
+}
+
+/** Fábrica de drones: una banda que avanza con drones encima y un brazo robot. */
+function cuartoFabrica(grupo) {
+  const banda = texturaDe(128, 512, (c, w, h) => {
+    c.fillStyle = '#1A1C20'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#3A3E46';
+    for (let y = 0; y < h; y += 32) c.fillRect(0, y, w, 8);
+  });
+  banda.wrapS = THREE.RepeatWrapping;
+  banda.wrapT = THREE.RepeatWrapping;
+  cascaron(grupo, {
+    fondo: texturaDe(512, 608, (c, w, h) => {
+      paredMetal('#FF8A3D')(c, w, h);
+      // franjas de peligro
+      for (let x = -40; x < w; x += 60) {
+        c.fillStyle = '#F2C14E';
+        c.beginPath(); c.moveTo(x, 40); c.lineTo(x + 30, 40); c.lineTo(x + 60, 80); c.lineTo(x + 30, 80); c.closePath(); c.fill();
+      }
+    }),
+    izquierda: texturaDe(512, 512, paredMetal('#FF8A3D')),
+    piso: texturaDe(512, 608, pisoMetal),
+    techo: texturaDe(256, 256, (c, w, h) => { c.fillStyle = '#121418'; c.fillRect(0, 0, w, h); c.fillStyle = '#FFD9B0'; c.fillRect(0, 110, w, 30); }),
+  });
+  // la banda
+  bloque(grupo, [0.26, 0.16, 0.9], [0, PISO + 0.08, -0.47], mate(0x2A2E36));
+  const cinta = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.9), new THREE.MeshBasicMaterial({ map: banda }));
+  cinta.rotation.x = -Math.PI / 2;
+  cinta.position.set(0, PISO + 0.162, -0.47);
+  grupo.add(cinta);
+  // drones: cuerpo gris con ojo rojo
+  const drones = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new THREE.Group();
+    bloque(d, [0.11, 0.05, 0.11], [0, 0, 0], mate(0x6B7380));
+    bloque(d, [0.05, 0.012, 0.012], [0, 0.005, 0.056], luz(0xff1638));
+    [-1, 1].forEach((l) => [-1, 1].forEach((m) => cilindro(d, [0.025, 0.025, 0.006], [l * 0.07, 0.03, m * 0.07], mate(0x2A2E36), 12)));
+    d.userData.fase = i / 3;
+    grupo.add(d);
+    drones.push(d);
+  }
+  // brazo robot que sube y baja
+  const brazo = new THREE.Group();
+  cilindro(brazo, [0.04, 0.05, 0.06], [0, 0, 0], mate(0xFF8A3D));
+  const codo = new THREE.Group();
+  bloque(codo, [0.03, 0.3, 0.03], [0, 0.15, 0], mate(0xFF8A3D));
+  bloque(codo, [0.06, 0.02, 0.06], [0, 0.3, 0], mate(0x2A2E36));
+  codo.position.y = 0.03;
+  brazo.add(codo);
+  brazo.position.set(-0.24, PISO + 0.03, -0.5);
+  grupo.add(brazo);
+  grupo.userData.animar = (t) => {
+    const s = t / 1000;
+    banda.offset.y = -s * 0.25;
+    drones.forEach((d) => {
+      const k = (s * 0.12 + d.userData.fase) % 1;
+      d.position.set(0, PISO + 0.19, -0.9 + k * 0.85);
+    });
+    codo.rotation.z = -0.5 + Math.sin(s * 1.6) * 0.35;
+  };
+}
+
+/** Presa: el muro de concreto, el agua con olas y una cortina de agua que cae. */
+function cuartoPresa(grupo) {
+  const agua = texturaDe(256, 256, (c, w, h) => {
+    c.fillStyle = '#1F6FB8'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(223,241,255,.5)';
+    c.lineWidth = 4;
+    for (let y = 16; y < h; y += 32) {
+      c.beginPath();
+      for (let x = 0; x <= w; x += 16) c.lineTo(x, y + Math.sin(x / 20 + y) * 5);
+      c.stroke();
+    }
+  });
+  agua.wrapS = THREE.RepeatWrapping;
+  agua.wrapT = THREE.RepeatWrapping;
+  agua.repeat.set(2, 2);
+  const cascada = texturaDe(64, 256, (c, w, h) => {
+    c.fillStyle = '#7FC4F5'; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(255,255,255,.6)';
+    for (let y = 0; y < h; y += 24) c.fillRect(0, y, w, 6);
+  });
+  cascada.wrapT = THREE.RepeatWrapping;
+  cascaron(grupo, {
+    fondo: texturaDe(512, 608, (c, w, h) => {
+      pared(c, w, h, '#9AA3AE', '#5E6670');
+      c.strokeStyle = 'rgba(0,0,0,.18)';
+      c.lineWidth = 4;
+      for (let y = 60; y < h; y += 80) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+      // compuertas
+      c.fillStyle = '#3A4150';
+      [110, 230, 350].forEach((x) => c.fillRect(x, 330, 60, 90));
+      sombraOrillas(c, w, h, 0.4);
+    }),
+    izquierda: texturaDe(512, 512, (c, w, h) => { pared(c, w, h, '#8A939E', '#555D67'); sombraOrillas(c, w, h, 0.5); }),
+    piso: texturaDe(256, 256, (c, w, h) => { c.fillStyle = '#1F6FB8'; c.fillRect(0, 0, w, h); }),
+    techo: texturaDe(256, 256, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#9FD0F5'); g.addColorStop(1, '#5E9FD8');
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+    }),
+  });
+  const superficie = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.95), new THREE.MeshBasicMaterial({ map: agua, transparent: true, opacity: 0.95 }));
+  superficie.rotation.x = -Math.PI / 2;
+  superficie.position.set(0, PISO + 0.08, -0.47);
+  grupo.add(superficie);
+  const chorro = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.36), new THREE.MeshBasicMaterial({ map: cascada, transparent: true, opacity: 0.85 }));
+  chorro.position.set(0, PISO + 0.26, -0.93);
+  grupo.add(chorro);
+  // barandal arriba del muro
+  bloque(grupo, [0.8, 0.02, 0.02], [0, CUARTO.alto / 2 - 0.22, -0.9], mate(0xF2F4F8));
+  grupo.userData.animar = (t) => {
+    const s = t / 1000;
+    agua.offset.set(s * 0.03, s * 0.05);
+    cascada.offset.y = s * 0.9;
+  };
+}
+
+/** Planta de agua: tanques, tubos y burbujas que suben. */
+function cuartoPlanta(grupo) {
+  cascaron(grupo, {
+    fondo: texturaDe(512, 608, (c, w, h) => { pared(c, w, h, '#DDE8EC', '#9FB3BA'); sombraOrillas(c, w, h, 0.4); }),
+    izquierda: texturaDe(512, 512, (c, w, h) => { pared(c, w, h, '#D3E0E4', '#94A8B0'); sombraOrillas(c, w, h, 0.45); }),
+    piso: texturaDe(512, 608, (c, w, h) => { losetas(c, w, h, 64, '#BFCBD0', '#B5C2C8', '#8C9BA2'); sombraOrillas(c, w, h, 0.4); }),
+    techo: texturaDe(256, 256, (c, w, h) => { c.fillStyle = '#E8EEF0'; c.fillRect(0, 0, w, h); }),
+  });
+  const vidrio = new THREE.MeshLambertMaterial({ color: 0x7FD1C7, transparent: true, opacity: 0.45 });
+  const metal = mate(0x8A939E);
+  const burbujas = [];
+  [-0.22, 0.04, 0.26].forEach((x, i) => {
+    const alto = 0.48 + (i % 2) * 0.12;
+    const z = -0.6 + (i === 1 ? -0.15 : 0);
+    cilindro(grupo, [0.1, 0.1, alto], [x, PISO + alto / 2, z], vidrio, 24);
+    cilindro(grupo, [0.105, 0.105, 0.02], [x, PISO + alto, z], metal, 24);
+    for (let k = 0; k < 6; k++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), luz(0xffffff, { transparent: true, opacity: 0.8 }));
+      b.userData = { x: x + (Math.random() - 0.5) * 0.1, z: z + (Math.random() - 0.5) * 0.1, alto, fase: Math.random() };
+      grupo.add(b);
+      burbujas.push(b);
+    }
+  });
+  // tubos entre los tanques
+  bloque(grupo, [0.5, 0.025, 0.025], [0.02, PISO + 0.4, -0.66], mate(0x3FA9F5));
+  bloque(grupo, [0.025, 0.4, 0.025], [0.36, PISO + 0.2, -0.6], mate(0x3FA9F5));
+  // una gota grande en el piso (el agua limpia)
+  const gota = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), luz(0x3FA9F5));
+  gota.scale.set(1, 1.3, 1);
+  gota.position.set(-0.25, PISO + 0.07, -0.25);
+  grupo.add(gota);
+  grupo.userData.animar = (t) => {
+    const s = t / 1000;
+    burbujas.forEach((b) => {
+      const k = (s * 0.25 + b.userData.fase) % 1;
+      b.position.set(b.userData.x, PISO + 0.03 + k * (b.userData.alto - 0.06), b.userData.z);
+    });
+    gota.position.y = PISO + 0.07 + Math.abs(Math.sin(s * 2)) * 0.03;
+  };
+}
+
+/** Antenas: una torre de rejilla con luces rojas y ondas de señal. */
+function cuartoAntenas(grupo) {
+  cascaron(grupo, {
+    fondo: texturaDe(512, 608, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#0B0F1E'); g.addColorStop(1, '#2A1A2E');
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#FFFFFF';
+      for (let i = 0; i < 60; i++) c.fillRect((i * 97) % w, (i * 53) % (h * 0.6), 2, 2);
+    }),
+    izquierda: texturaDe(512, 512, (c, w, h) => { c.fillStyle = '#10142A'; c.fillRect(0, 0, w, h); sombraOrillas(c, w, h, 0.4); }),
+    piso: texturaDe(512, 608, (c, w, h) => { c.fillStyle = '#3A3226'; c.fillRect(0, 0, w, h); sombraOrillas(c, w, h, 0.5); }),
+    techo: texturaDe(256, 256, (c, w, h) => { c.fillStyle = '#0B0F1E'; c.fillRect(0, 0, w, h); }),
+  });
+  const amarillo = mate(0xF2C14E);
+  const torre = new THREE.Group();
+  const alto = 0.78;
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => {
+    const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, alto, 6), amarillo);
+    pata.position.set(x * 0.06, alto / 2, z * 0.06);
+    pata.rotation.set(z * 0.1, 0, -x * 0.1);
+    torre.add(pata);
+  });
+  for (let y = 0.1; y < alto; y += 0.12) bloque(torre, [0.18 - y * 0.12, 0.008, 0.008], [0, y, 0.06 - y * 0.05], amarillo);
+  const luces = [0.35, 0.6, alto].map((y) => {
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), luz(0xff1638));
+    l.position.set(0, y, 0);
+    torre.add(l);
+    return l;
+  });
+  const plato = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.04, 20, 1, true), new THREE.MeshLambertMaterial({ color: 0xE6E8EB, side: THREE.DoubleSide }));
+  plato.position.set(0.05, 0.55, 0.04);
+  plato.rotation.z = -1.2;
+  torre.add(plato);
+  torre.position.set(0, PISO, -0.55);
+  grupo.add(torre);
+  const ondas = [0, 1, 2].map((i) => {
+    const o = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.004, 6, 40), luz(0xF2C14E, { transparent: true, opacity: 0.8 }));
+    o.position.set(0, PISO + alto, -0.55);
+    o.userData.fase = i / 3;
+    grupo.add(o);
+    return o;
+  });
+  grupo.userData.animar = (t) => {
+    const s = t / 1000;
+    luces.forEach((l, i) => { l.visible = Math.floor(s * 2 + i * 0.5) % 2 === 0; });
+    ondas.forEach((o) => {
+      const k = (s * 0.5 + o.userData.fase) % 1;
+      o.scale.setScalar(1 + k * 3);
+      o.material.opacity = 0.8 * (1 - k);
+    });
+  };
+}
+
+/** Cuarentena: una jaula de seguridad con un paquete falso que parpadea y una sirena que gira. */
+function cuartoCuarentena(grupo) {
+  cascaron(grupo, {
+    fondo: texturaDe(512, 608, (c, w, h) => {
+      paredMetal('#B9A6FF')(c, w, h);
+      c.fillStyle = '#B9A6FF';
+      c.font = '700 54px sans-serif';
+      c.textAlign = 'center';
+      c.fillText('CUARENTENA', w / 2, 120);
+    }),
+    izquierda: texturaDe(512, 512, paredMetal('#B9A6FF')),
+    piso: texturaDe(512, 608, (c, w, h) => {
+      pisoMetal(c, w, h);
+      // franjas de peligro alrededor de la jaula
+      c.save();
+      c.beginPath(); c.rect(96, 150, 320, 320); c.clip();
+      for (let x = -400; x < w; x += 50) {
+        c.fillStyle = '#F2C14E';
+        c.beginPath(); c.moveTo(x, 470); c.lineTo(x + 25, 470); c.lineTo(x + 345, 150); c.lineTo(x + 320, 150); c.closePath(); c.fill();
+      }
+      c.restore();
+      c.fillStyle = '#2A2E35'; c.fillRect(126, 180, 260, 260);
+    }),
+    techo: texturaDe(256, 256, (c, w, h) => { c.fillStyle = '#121418'; c.fillRect(0, 0, w, h); }),
+  });
+  // la jaula
+  const barra = mate(0xB8BEC8);
+  const lado = 0.34;
+  for (let i = 0; i <= 6; i++) {
+    const x = -lado / 2 + (i / 6) * lado;
+    [-lado / 2, lado / 2].forEach((z) => cilindro(grupo, [0.006, 0.006, 0.4], [x, PISO + 0.2, -0.5 + z], barra, 6));
+    [-lado / 2, lado / 2].forEach((xx) => cilindro(grupo, [0.006, 0.006, 0.4], [xx, PISO + 0.2, -0.5 + x], barra, 6));
+  }
+  bloque(grupo, [lado + 0.02, 0.02, lado + 0.02], [0, PISO + 0.4, -0.5], barra);
+  // el paquete falso, con su orilla roja
+  const caja = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+  const paquete = new THREE.Mesh(caja, new THREE.MeshLambertMaterial({ color: 0xff6b7d, transparent: true, opacity: 0.85 }));
+  const orilla = new THREE.LineSegments(new THREE.EdgesGeometry(caja), new THREE.LineBasicMaterial({ color: 0xff1638 }));
+  paquete.add(orilla);
+  paquete.position.set(0, PISO + 0.16, -0.5);
+  grupo.add(paquete);
+  // sirena giratoria
+  const sirena = new THREE.Group();
+  cilindro(sirena, [0.03, 0.035, 0.05], [0, 0, 0], luz(0xB9A6FF));
+  const haz = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.05), luz(0xB9A6FF, { transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
+  haz.position.x = 0.15;
+  sirena.add(haz);
+  sirena.position.set(0.3, CUARTO.alto / 2 - 0.08, -0.3);
+  grupo.add(sirena);
+  grupo.userData.animar = (t) => {
+    const s = t / 1000;
+    paquete.rotation.set(s * 0.7, s, 0);
+    paquete.visible = Math.sin(s * 9) > -0.6;
+    sirena.rotation.y = s * 3;
+  };
+}
+
 const CUARTOS = {
   salon: cuartoSalon,
   biblioteca: cuartoBiblioteca,
@@ -583,6 +926,12 @@ const CUARTOS = {
   servidores: cuartoServidores,
   laboratorio: cuartoLaboratorio,
   basura: cuartoBasura,
+  nucleo: cuartoNucleo,
+  fabrica: cuartoFabrica,
+  presa: cuartoPresa,
+  planta: cuartoPlanta,
+  antenas: cuartoAntenas,
+  cuarentena: cuartoCuarentena,
 };
 
 /** Puerta completa: marco de color + cuarto 3D detrás. */

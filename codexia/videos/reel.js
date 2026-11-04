@@ -129,77 +129,80 @@ const GUIONES = {
     preparar(j, w) {
       j.empezar('ronda');
       j.finRonda = w.performance.now() + 168000;
-      for (let i = 0; i < 80 && j.paquete.destino !== 'SALÓN'; i++) j.nuevoPaquete();
-      const d = { red: j.paquete.ip.split('.').slice(0, 3).join('.'), puerta: 'SALÓN' };
-      [d.yaw, d.pitch] = mirarA(j.puertas['SALÓN'].el.object3D.position);
+      for (let i = 0; i < 80 && j.paquete.destino !== 'NÚCLEO'; i++) j.nuevoPaquete();
+      const d = { red: j.paquete.ip.split('.').slice(0, 3).join('.'), puerta: 'NÚCLEO' };
+      [d.yaw, d.pitch] = mirarA(j.puertas['NÚCLEO'].el.object3D.position);
       return d;
     },
     pasos: (d) => [
       { t: 2.2, quien: 'OPERADOR', texto: `Ultrón inunda la red. El Operador dicta la red del paquete: ${d.red}` },
-      { t: 6.0, quien: 'EQUIPO', texto: `Busca la red en su tabla de rutas: va al ${d.puerta}` },
+      { t: 6.0, quien: 'EQUIPO', texto: `Busca la red en su tabla de rutas: va al ${d.puerta} de Ultrón` },
       { t: 9.8, quien: 'OPERADOR', texto: 'Voltea y le dispara el paquete a esa puerta' },
     ],
     eventos: (d, j) => [
       { t: 0, cam: [0, -10] },
       { t: 9.9, cam: [d.yaw, d.pitch], seg: 1.3 },
-      { t: 11.7, hacer: () => { j.elegir('SALÓN'); sonido.bien(); }, exito: '+1' },
+      { t: 11.7, hacer: () => { j.elegir('NÚCLEO'); sonido.bien(); }, exito: '+1' },
     ],
     manual(c, x, y, w, h, d) {
       encabezadoManual(c, x, y, w, 'TABLA DE RUTAS');
-      const filas = [['192.168.1', 'SALÓN'], ['192.168.2', 'BIBLIOTECA'], ['otra red', 'INTERNET']];
+      const filas = [['192.168.66', 'NÚCLEO'], ['192.168.7', 'FÁBRICA'], ['10.20.1', 'PRESA'], ['otra red', 'INTERNET']];
       filas.forEach(([red, puerta], i) => {
-        const fy = y + 110 + i * 64;
+        const fy = y + 100 + i * 50;
         const mia = red === d.red;
-        if (mia) { rectRedondo(c, x + 20, fy - 30, w - 40, 58, 10); c.fillStyle = '#DCEBFF'; c.fill(); }
-        escribir(c, red, x + 40, fy, { tam: 30, peso: 600, color: '#160a0d', fuente: MONO });
-        escribir(c, `→  ${puerta}`, x + w - 40, fy, { tam: 30, peso: 700, color: mia ? '#c8102e' : '#160a0d', alinear: 'right' });
+        if (mia) { rectRedondo(c, x + 20, fy - 23, w - 40, 46, 10); c.fillStyle = '#FCE3E7'; c.fill(); }
+        escribir(c, red, x + 40, fy, { tam: 27, peso: 600, color: '#160a0d', fuente: MONO });
+        escribir(c, `→  ${puerta}`, x + w - 40, fy, { tam: 27, peso: 700, color: mia ? '#c8102e' : '#160a0d', alinear: 'right' });
       });
     },
   },
 
   arma: {
-    titulo: 'Arma la computadora',
-    area: 'HARDWARE · 5 MINUTOS',
+    titulo: 'Arma a Ultrón',
+    area: 'ROBÓTICA · 5 MINUTOS',
     archivo: '../arma.html',
     componente: 'arma-computadora',
-    final: ['4 piezas = el 3.er número de la IP', 'Arman la computadora que rastrea a Ultrón'],
+    final: ['4 piezas = el 3.er número de la IP', 'Primero adivinan el modelo por sus detalles'],
     preparar(j) {
       j.empezar('ronda');
-      const n = [...j.placa.abiertas].sort((a, b) => a - b)[0];
+      // un brazo: su lado cambia según el modelo, así que primero hay que adivinarlo
+      const n = [...j.placa.abiertas].find((x) => x === 1) ?? [...j.placa.abiertas][0];
       const id = j.placa.orden[n];
-      const d = { n, id, nombre: j.nombreDe(id), modelo: j.placa.modelo, img: j.imagenes[id] };
+      const det = j.datos.detalles[j.placa.modelo];
+      const d = { n, id, nombre: j.nombreDe(id), modelo: j.placa.modelo, det, img: j.imagenes[id] };
       [d.yaw, d.pitch] = mirarA(j.piezas[id].casa);
       return d;
     },
     pasos: (d) => [
-      { t: 2.2, quien: 'OPERADOR', texto: `Arma el rastreador de Ultrón: ve la placa ${d.modelo} y las piezas sin nombre` },
-      { t: 6.0, quien: 'EQUIPO', texto: `La reconoce en su catálogo: ${d.nombre}. En el plano va en el ${d.n + 1}` },
+      { t: 2.2, quien: 'OPERADOR', texto: `No sabe el modelo: describe hombros ${d.det.hombros} y un ${d.det.emblema} en la cintura` },
+      { t: 6.0, quien: 'EQUIPO', texto: `¡Es el modelo ${d.modelo}! Y esa pieza es el ${d.nombre.toLowerCase()}: va en el ${d.n + 1}` },
       { t: 9.8, quien: 'OPERADOR', texto: `Apunta al número ${d.n + 1} y la pieza vuela a su lugar` },
     ],
     eventos: (d, j) => [
-      { t: 0, cam: [0, 12] },
-      { t: 3.6, cam: [d.yaw, d.pitch], seg: 1.3 },
-      { t: 5.2, hacer: () => { j.tomar(d.id); } },
-      { t: 9.9, cam: [0, 12], seg: 1.2 },
+      { t: 0, cam: [0, 14] },
+      { t: 3.8, cam: [d.yaw, d.pitch], seg: 1.3 },
+      { t: 5.4, hacer: () => { j.tomar(d.id); } },
+      { t: 9.9, cam: [0, 14], seg: 1.2 },
       { t: 11.5, hacer: () => { j.poner(d.n); } },
       { t: 12.0, hacer: () => sonido.bien(), exito: '+1' },
     ],
     manual(c, x, y, w, h, d) {
-      encabezadoManual(c, x, y, w, `CATÁLOGO Y PLANO · MODELO ${d.modelo}`);
-      const lado = 150;
-      rectRedondo(c, x + 30, y + 80, lado, lado, 14);
+      encabezadoManual(c, x, y, w, `MODELO ${d.modelo} · ${d.det.nombre.toUpperCase()}`);
+      escribir(c, `Hombros ${d.det.hombros} · ${d.det.emblema}`, x + 30, y + 92, { tam: 26, peso: 700, color: '#c8102e', max: w - 60 });
+      const lado = 140;
+      rectRedondo(c, x + 30, y + 120, lado, lado, 14);
       c.fillStyle = '#E9EEF5';
       c.fill();
-      if (d.img) c.drawImage(d.img, x + 42, y + 92, lado - 24, lado - 24);
-      escribir(c, d.nombre, x + 210, y + 120, { tam: 30, peso: 700, color: '#160a0d' });
-      escribir(c, 'En el plano armado:', x + 210, y + 170, { tam: 24, color: '#3B4A60' });
-      escribir(c, `lugar ${d.n + 1}`, x + 210, y + 210, { tam: 36, peso: 700, color: '#c8102e' });
+      if (d.img) c.drawImage(d.img, x + 42, y + 132, lado - 24, lado - 24);
+      escribir(c, d.nombre, x + 200, y + 160, { tam: 30, peso: 700, color: '#160a0d', max: w - 230 });
+      escribir(c, 'En el plano del modelo:', x + 200, y + 205, { tam: 24, color: '#3B4A60' });
+      escribir(c, `lugar ${d.n + 1}`, x + 200, y + 245, { tam: 36, peso: 700, color: '#c8102e' });
     },
   },
 
   carrera: {
     titulo: 'Carrera de palabras',
-    area: 'BINARIO Y ASCII · 3 MINUTOS',
+    area: 'BINARIO Y ASCII · 5 MINUTOS',
     archivo: '../carrera.html',
     componente: 'carrera-palabras',
     final: ['3 palabras = el 4.º número de la IP', 'Cada palabra trae un consejo para cuidar el agua'],

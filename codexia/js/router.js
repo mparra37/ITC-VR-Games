@@ -1,13 +1,14 @@
 /* CODEXIA · Ghost Network (edición de Enlace VR) · Router humano
  *
- * El Operador es el router de la escuela. Llega un paquete con una dirección IP. Como en un sobre,
+ * Edición CODEXIA: las puertas son los lugares del mundo de Ultrón (ver ../../router_codexia.json).
+ * El Operador es el router de la ciudad. Llega un paquete con una dirección IP. Como en un sobre,
  * los 3 primeros números son la RED (la calle) y el último es el EQUIPO (el número de casa):
  * el visor pinta la red en azul y el equipo en gris. El Operador le dicta la red al equipo, el equipo
  * la busca en la tabla de rutas del Manual de campo y le dice la puerta. El Operador voltea, encuentra
  * la puerta (cada una tiene su dibujo) y le dispara el paquete. Siempre se muestra por qué.
  *
- * Nivel 1: SALÓN, BIBLIOTECA, INTERNET.  Nivel 2: + SERVIDORES y redes parecidas.
- * Nivel 3: + LABORATORIO y BASURA (direcciones imposibles), y las puertas se mueven tras cada paquete.
+ * Nivel 1: 6 puertas desde el principio: NÚCLEO, FÁBRICA, PRESA, PLANTA, ANTENAS e INTERNET.
+ * Nivel 2: + redes parecidas. Nivel 3: + CUARENTENA (direcciones imposibles) y las puertas se mueven.
  * Ronda de 3 minutos, +1 por acierto, bloqueo de 5 segundos al fallar o saltar.
  * Cada puerta es un cuarto pequeño en 3D (salón, biblioteca, laboratorio…): ver js/router_cuartos.js.
  */
@@ -24,9 +25,10 @@ const CONFIG = {
 };
 
 // lugares alrededor del jugador: ángulo (grados, + = derecha) y altura
+// (7 lugares: en el nivel 3 aparece la 7.ª puerta, CUARENTENA)
 const LUGARES = [
-  { a: -85, y: 1.3 }, { a: -55, y: 1.35 }, { a: -24, y: 1.95 },
-  { a: 24, y: 1.95 }, { a: 55, y: 1.35 }, { a: 85, y: 1.3 },
+  { a: -92, y: 1.3 }, { a: -63, y: 1.32 }, { a: -33, y: 1.95 }, { a: 0, y: 2.95 },
+  { a: 33, y: 1.95 }, { a: 63, y: 1.32 }, { a: 92, y: 1.3 },
 ];
 
 // ---------- la tabla de rutas (igual que en generar_router.py) ----------
@@ -38,7 +40,7 @@ function destinosDelNivel(nivel) {
 /** A qué puerta va una IP según la tabla de rutas del nivel. */
 function enrutar(ip, nivel) {
   const numeros = ip.split('.').map(Number);
-  if (nivel >= 3 && numeros.some((n) => n > 255)) return 'BASURA';
+  if (nivel >= 3 && numeros.some((n) => n > 255)) return 'CUARENTENA';
   const red = numeros.slice(0, 3).join('.');
   const destino = destinosDelNivel(nivel).find((d) => d.red === red);
   return destino ? destino.nombre : 'INTERNET';
@@ -67,7 +69,7 @@ function generarPaquete(nivel, anterior) {
     } else if (destino.nombre === 'INTERNET') {
       ip = nivel >= 2 && Math.random() < 0.55 ? `${azarDe(r.parecidos)}.${entre(2, 254)}` : azarDe(r.internet_ejemplos);
     } else {
-      // BASURA: una IP con un número mayor a 255
+      // CUARENTENA: un paquete falso de Ultrón, con un número mayor a 255
       const base = azarDe(opciones.filter((d) => d.red)).red.split('.').map(Number).concat([entre(2, 254)]);
       base[entre(1, 3)] = entre(256, 399);
       ip = base.join('.');
@@ -338,7 +340,7 @@ AFRAME.registerComponent('router-humano', {
     if (nivelNuevo > this.nivel) {
       this.nivel = nivelNuevo;
       this.asignarPuertas();
-      this.avisar(this.nivel === 3 ? '¡Nivel 3! LABORATORIO, BASURA… y las puertas se mueven' : '¡Nivel 2! Nueva puerta: SERVIDORES. ¡Ojo con las redes parecidas!', COLOR.acento);
+      this.avisar(this.nivel === 3 ? '¡Nivel 3! Paquetes falsos a CUARENTENA… y las puertas se mueven' : '¡Nivel 2! Ultrón manda redes parecidas: ¡revisen número por número!', COLOR.acento);
       sonido.nivel();
     } else if (this.nivel === 3) {
       this.asignarPuertas();
@@ -435,7 +437,7 @@ AFRAME.registerComponent('router-humano', {
     pintar(this.lienzoTitulo, (ctx, w, h) => {
       texto(ctx, `MISIÓN: Ultrón inunda la red · ${window.MISION.juegos.router.minimo} paquetes = los 2 primeros números de su IP`, w / 2, h * 0.08, { tam: 34, color: COLOR.acento, peso: 600, alinear: 'center' });
       texto(ctx, 'Router humano', w / 2, h * 0.25, { tam: 92, peso: 700, alinear: 'center' });
-      dibujarIP(ctx, '192.168.1.45', w * 0.25, h * 0.5, 64, true);
+      dibujarIP(ctx, '192.168.66.45', w * 0.25, h * 0.5, 64, true);
       const pasos = [
         '1. Dicta la RED: los 3 primeros números.',
         '2. El equipo te dice la puerta.',

@@ -55,9 +55,9 @@
     <tbody>
       <tr><td class="min">0:00</td><td>Bienvenida, la misión y los videos del menú (▶ Ver los videos).</td></tr>
       <tr><td class="min">0:05</td><td>Cada equipo en su visor: número de equipo y <b>Nuevo equipo</b>. Repartan la Bitácora y los manuales.</td></tr>
-      <tr><td class="min">0:08</td><td>Router humano (3 min).</td></tr>
-      <tr><td class="min">0:15</td><td>Arma la computadora (5 min).</td></tr>
-      <tr><td class="min">0:22</td><td>Carrera de palabras (3 min): palabras y consejos del agua.</td></tr>
+      <tr><td class="min">0:08</td><td>Router humano (3 min): seis puertas del mundo de Ultrón.</td></tr>
+      <tr><td class="min">0:14</td><td>Arma a Ultrón (5 min): primero adivinen el modelo.</td></tr>
+      <tr><td class="min">0:21</td><td>Carrera de palabras (5 min): palabras y consejos del agua.</td></tr>
       <tr><td class="min">0:28</td><td>Misión final: lleven a Ultrón al agua (5 min).</td></tr>
       <tr><td class="min">0:35</td><td>Anoten la IP y el GPS. Un minuto de agua: ¿qué consejo les tocó?</td></tr>
     </tbody>
@@ -69,7 +69,7 @@
     <a class="descarga" href="material/00_Guia_del_taller.pdf"><b>00 · Guía del taller</b><span>Facilitador. Incluye la clave (IP y GPS)</span></a>
     <a class="descarga" href="material/01_Bitacora_de_la_mision.pdf"><b>01 · Bitácora</b><span>1 por equipo</span></a>
     <a class="descarga" href="material/02_Manual_Router_humano.pdf"><b>02 · Manual Router humano</b><span>1 por equipo</span></a>
-    <a class="descarga" href="material/03_Manual_Arma_la_computadora.pdf"><b>03 · Manual Arma la computadora</b><span>1 por equipo, a color</span></a>
+    <a class="descarga" href="material/03_Manual_Arma_a_Ultron.pdf"><b>03 · Manual Arma a Ultrón</b><span>1 por equipo, a color: piezas y los 3 modelos</span></a>
     <a class="descarga" href="material/04_Manual_Carrera_de_palabras.pdf"><b>04 · Manual Carrera de palabras</b><span>1 por equipo</span></a>
     <a class="descarga" href="material/05_Manual_Mision_final.pdf"><b>05 · Manual Misión final</b><span>Los 12 sectores con antenas y la presa</span></a>
   </div>
@@ -86,7 +86,7 @@
 <script src="js/mision.js"></script>
 <script>
   const pistas = { router: '1.º y 2.º número de la IP', arma: '3.er número de la IP', carrera: '4.º número de la IP', robot: '1.ª vez al agua: latitud · 2.ª vez: longitud' };
-  const minutos = { router: 3, arma: 5, carrera: 3, robot: 5 };
+  const minutos = { router: 3, arma: 5, carrera: 5, robot: 5 };
   document.getElementById('pistas').innerHTML = Object.entries(window.MISION.juegos).map(([k, j]) =>
     `<tr><td><b>${k === 'robot' ? 'Misión final · Robot programado' : j.nombre}</b></td><td>${k === 'robot' ? '5 min · cada vez que Ultrón cae al agua' : `${minutos[k]} min · mínimo ${j.minimo} ${j.unidad}`}</td><td>${pistas[k]}</td></tr>`).join('');
 </script>

@@ -2,7 +2,7 @@
  *
  * El Operador ve una palabra escrita en binario, un byte por letra.
  * El equipo busca las letras en el Manual de campo y el Operador las escribe.
- * Ronda de 3 minutos, +1 por palabra, bloqueo de 5 segundos al fallar o saltar,
+ * Ronda de 5 minutos (edición CODEXIA), +1 por palabra, bloqueo de 5 segundos al fallar o saltar,
  * sube de nivel cada 5 palabras (3, 4 y 5 letras).
  * El fondo es el viaje de un mensaje por la red (js/ambientes.js): con cada palabra correcta el mensaje
  * da un salto y cambia el escenario (computadora → servidores → ciudad → fibra → Internet → satélite).
@@ -12,7 +12,7 @@
 /* global MISION, AFRAME, COLOR, MONO, texto, fondoPanel, minutos, pintar, rectRedondo, sonido, crearEntidad, refrescarApuntadores, marcador, rondaComun, dibujarFinalRonda */
 
 const CONFIG = {
-  segundosRonda: 180,
+  segundosRonda: 300,
   segundosBloqueo: 5,
   aciertosPorNivel: 5,
   nivelMaximo: 3,
@@ -65,7 +65,7 @@ AFRAME.registerComponent('carrera-palabras', {
     const ini = this.pantallas.inicio;
     this.lienzoTitulo = this.crear(ini, { lienzo: 'ancho: 2; alto: 0.62', position: '0 0.42 0' });
     this.crearBoton('inicio', 'Practicar (sin tiempo)', -0.45, -0.1, { ancho: 0.76, alto: 0.16, accion: 'practicar' });
-    this.crearBoton('inicio', 'Empezar ronda · 3 min', 0.45, -0.1, { ancho: 0.76, alto: 0.16, accion: 'empezar', estilo: 'principal' });
+    this.crearBoton('inicio', 'Empezar ronda · 5 min', 0.45, -0.1, { ancho: 0.76, alto: 0.16, accion: 'empezar', estilo: 'principal' });
     this.crearBoton('inicio', 'Menú de juegos', 0, -0.72, { ancho: 0.6, alto: 0.12, accion: 'menu' });
     this.lienzoSeguridad = this.crear(ini, { lienzo: 'ancho: 2; alto: 0.24', position: '0 -0.44 0' });
 
@@ -153,7 +153,7 @@ AFRAME.registerComponent('carrera-palabras', {
     this.nuevaPalabra();
     this.mostrar('juego');
     this.dibujarTodo();
-    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Tienen 3 minutos', COLOR.acento);
+    this.avisar(modo === 'practica' ? 'Práctica: sin tiempo y sin puntos para el marcador' : '¡Ya! Tienen 5 minutos', COLOR.acento);
     rondaComun.empezar(modo);
     sonido.nivel();
   },
