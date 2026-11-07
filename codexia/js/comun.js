@@ -649,8 +649,16 @@ function dibujarFinalRonda(ctx, w, h, { practica, puntaje, unidad, detalle, regi
     rectRedondo(ctx, 40, h * 0.54, w - 80, h * 0.13, 14);
     ctx.fillStyle = '#160A0D';
     ctx.fill();
-    texto(ctx, `TOTAL DEL EQUIPO: ${registro.total}`, 70, h * 0.605, { tam: 42, peso: 600, color: COLOR.texto });
-    texto(ctx, registro.resumen, w - 70, h * 0.605, { tam: 27, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
+    if (registro.codexia !== undefined && typeof mision !== 'undefined') {
+      // puntos sobre 100 que van al marcador general de CODEXIA, y si ya se mandaron
+      const envio = mision.envio();
+      texto(ctx, `PUNTOS CODEXIA: ${mision.puntosCodexia()} / 100`, 70, h * 0.583, { tam: 40, peso: 700, color: COLOR.texto });
+      texto(ctx, registro.resumen, w - 70, h * 0.583, { tam: 27, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
+      texto(ctx, mision.textoEnvio(), 70, h * 0.64, { tam: 27, peso: 600, color: envio && envio.estado === 'enviado' ? COLOR.bien : COLOR.acento, fuente: MONO });
+    } else {
+      texto(ctx, `TOTAL DEL EQUIPO: ${registro.total}`, 70, h * 0.605, { tam: 42, peso: 600, color: COLOR.texto });
+      texto(ctx, registro.resumen, w - 70, h * 0.605, { tam: 27, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
+    }
   }
   if (ronda && registro.pista) dibujarPista(ctx, 40, h * 0.7, w - 80, h * 0.2, registro.pista, registro);
   texto(ctx, 'Anoten puntaje y código en la bitácora · el visor se pasa con las dos manos', w / 2, ronda ? h * 0.95 : h * 0.8, { tam: 28, peso: 600, alinear: 'center', color: COLOR.tenue });

@@ -12,6 +12,11 @@
  * marcador.html con los códigos (que también guardan el número de equipo y el puntaje).
  *
  * ▶ IP y GPS DE EJEMPLO: cámbienlos aquí por los que definan los organizadores del reto final.
+ *
+ * MARCADOR GENERAL DE CODEXIA (Supabase): al terminar cada ronda, el visor manda los puntos del
+ * equipo sobre 100 a la columna taller_4 (Redes). Base 100 = 5 puntos por acierto en la mejor ronda
+ * de cada juego, máximo 25 por juego (4 juegos × 25). Supabase se queda con el más alto, así que
+ * mandar varias veces no hace daño. Sin internet se guarda en el visor y se reintenta solo.
  */
 /* global marcador */
 
@@ -24,6 +29,15 @@ window.MISION = {
     carrera: { nombre: 'Carrera de palabras', minimo: 3, unidad: 'palabras descifradas', partes: ['ip4'] },
     robot: { nombre: 'Robot programado', minimo: 1, unidad: 'veces que Ultrón cayó al agua', partes: ['lat', 'lon'] },
   },
+};
+
+window.CODEXIA_SCORES = {
+  url: 'https://zgpfcmvjmjfaphtudmis.supabase.co',
+  clave: 'sb_publishable_0uQxgvjB7S7eCSqssUlPnA_Brhj-zx7', // clave pública (no es secreta)
+  taller: 4, // columna taller_4 = estación 04 · Redes
+  porAcierto: 5,
+  topePorJuego: 25,
+  equipos: 20, // equipos del evento: 1 a 20
 };
 
 const mision = {
@@ -50,8 +64,12 @@ const mision = {
     try {
       localStorage.removeItem(this.clave);
       localStorage.removeItem('codexia-puntos');
+      localStorage.removeItem('codexia-envio');
     } catch (e) { /* sin almacenamiento */ }
+    // el equipo nuevo elige su número (así nadie manda puntos al equipo anterior)
+    if (typeof marcador !== 'undefined') marcador.ponerEquipo(0);
     document.dispatchEvent(new CustomEvent('codexia-pista'));
+    document.dispatchEvent(new CustomEvent('enlace-equipo'));
   },
 
   // ---------- puntos del equipo ----------
@@ -82,6 +100,92 @@ const mision = {
     const p = this.puntos();
     const cortos = { router: 'Router', arma: 'Arma', carrera: 'Carrera', robot: 'Misión' };
     return Object.keys(cortos).map((k) => `${cortos[k]} ${p[k] ? p[k].mejor : '—'}`).join(' · ');
+  },
+
+  // ---------- marcador general de CODEXIA (sobre 100) ----------
+
+  /** Puntos sobre 100 de un juego: 5 por acierto de la mejor ronda, máximo 25. */
+  puntosJuego(mejor) {
+    const c = window.CODEXIA_SCORES;
+    return Math.min(c.topePorJuego, c.porAcierto * (Number(mejor) || 0));
+  },
+
+  /** Puntos del equipo sobre 100 (lo que se manda a CODEXIA). */
+  puntosCodexia(p = this.puntos()) {
+    return Object.keys(window.MISION.juegos).reduce((a, k) => a + this.puntosJuego(p[k] ? p[k].mejor : 0), 0);
+  },
+
+  /** Último envío: { equipo, puntos, estado: 'enviando' | 'enviado' | 'sin-internet' | 'sin-equipo' }. */
+  envio() {
+    try { return JSON.parse(localStorage.getItem('codexia-envio') || 'null'); } catch (e) { return null; }
+  },
+  guardarEnvio(e) {
+    try { localStorage.setItem('codexia-envio', JSON.stringify(e)); } catch (x) { /* sin almacenamiento */ }
+    document.dispatchEvent(new CustomEvent('codexia-pista'));
+  },
+
+  /** Lo que falta mandar: { "12": 65, ... } (equipo → puntos). Sobrevive si se cierra la página. */
+  pendientes() {
+    try { return JSON.parse(localStorage.getItem('codexia-pendientes') || '{}'); } catch (e) { return {}; }
+  },
+  guardarPendientes(p) {
+    try { localStorage.setItem('codexia-pendientes', JSON.stringify(p)); } catch (e) { /* sin almacenamiento */ }
+  },
+
+  /** Manda los puntos actuales de este visor a su equipo. */
+  enviarCodexia() {
+    const equipo = typeof marcador !== 'undefined' ? marcador.equipo() : 0;
+    const puntos = this.puntosCodexia();
+    if (!puntos) return Promise.resolve(this.envio());
+    if (!equipo || equipo > window.CODEXIA_SCORES.equipos) {
+      this.guardarEnvio({ equipo: 0, puntos, estado: 'sin-equipo' });
+      return Promise.resolve(this.envio());
+    }
+    const p = this.pendientes();
+    p[equipo] = Math.max(p[equipo] || 0, puntos);
+    this.guardarPendientes(p);
+    this.guardarEnvio({ equipo, puntos, estado: 'enviando' });
+    return this.mandarPendientes().then(() => this.envio());
+  },
+
+  /** Intenta mandar todo lo pendiente (uno por equipo). */
+  mandarPendientes() {
+    if (this.mandando) return this.mandando.then(() => this.mandarPendientes());
+    const c = window.CODEXIA_SCORES;
+    const lista = Object.entries(this.pendientes());
+    if (!lista.length || !window.fetch) return Promise.resolve();
+    this.mandando = Promise.all(lista.map(([equipo, puntos]) => {
+      const control = window.AbortController ? new AbortController() : null;
+      const reloj = control ? setTimeout(() => control.abort(), 10000) : null;
+      return fetch(`${c.url}/rest/v1/rpc/registrar_taller`, {
+        method: 'POST',
+        headers: { apikey: c.clave, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_equipo: Number(equipo), p_taller: c.taller, p_puntaje: puntos }),
+        signal: control ? control.signal : undefined,
+      }).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const quedan = this.pendientes();
+        if ((quedan[equipo] || 0) <= puntos) delete quedan[equipo];
+        this.guardarPendientes(quedan);
+        return { equipo: Number(equipo), ok: true };
+      }).catch(() => ({ equipo: Number(equipo), ok: false }))
+        .finally(() => { if (reloj) clearTimeout(reloj); });
+    })).then((resultados) => {
+      this.mandando = null;
+      const e = this.envio();
+      const mio = e && resultados.find((r) => r.equipo === e.equipo);
+      if (mio) this.guardarEnvio(Object.assign({}, e, { estado: mio.ok ? 'enviado' : 'sin-internet' }));
+    });
+    return this.mandando;
+  },
+
+  /** Una línea para las pantallas: "Equipo 12 · enviado al marcador ✓". */
+  textoEnvio() {
+    const e = this.envio();
+    if (!this.puntosCodexia()) return 'Se manda al marcador de CODEXIA al terminar una ronda';
+    if (!e || e.estado === 'sin-equipo' || !e.equipo) return 'Elijan su número de equipo en el menú para mandar los puntos';
+    const estado = { enviando: 'enviando…', enviado: 'enviado al marcador ✓', 'sin-internet': 'sin internet: se reintenta solo' }[e.estado] || '';
+    return `Equipo ${e.equipo} · ${estado}`;
   },
 
   valor(parte) {
@@ -128,6 +232,20 @@ if (typeof marcador !== 'undefined') {
     mision.anotarPuntos(juego, puntaje);
     registro.total = mision.totalPuntos();
     registro.resumen = mision.resumenPuntos();
+    registro.codexia = mision.puntosCodexia();
+    mision.enviarCodexia().then(() => { if (alCambiar) alCambiar(registro); });
     return registro;
   };
+
+  // al elegir número de equipo (por ejemplo, si se les olvidó antes de jugar), mandar lo que llevan
+  const ponerEquipoOriginal = marcador.ponerEquipo.bind(marcador);
+  marcador.ponerEquipo = (n) => {
+    ponerEquipoOriginal(n);
+    if (Number(n) > 0 && mision.puntosCodexia() > 0) mision.enviarCodexia();
+  };
 }
+
+// al abrir cualquier página del taller (y al volver el internet), reintentar lo pendiente
+window.addEventListener('load', () => setTimeout(() => mision.mandarPendientes(), 2000));
+window.addEventListener('online', () => mision.mandarPendientes());
+setInterval(() => { if (Object.keys(mision.pendientes()).length) mision.mandarPendientes(); }, 30000);

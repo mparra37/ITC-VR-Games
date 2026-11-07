@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
   <script src="../js/config.js"></script>
   <script src="../js/marcador.js"></script>
+  <script src="js/mision.js"></script>
   <style>
     :root {
       --negro: #050405; --marino: #2A070E; --panel: #0E0A0B; --panel-2: #160C0F;
@@ -70,6 +71,22 @@
     pre { background: var(--negro); border: 1px solid var(--linea); border-radius: 10px; padding: 14px; overflow-x: auto; font: 13px/1.5 "IBM Plex Mono", monospace; max-height: 360px; }
     ol { line-height: 1.6; padding-left: 22px; }
     code { font-family: "IBM Plex Mono", monospace; font-size: .92em; color: #FFC9D0; }
+    #marcador td.cdx { font-weight: 700; color: var(--blanco); }
+    .solo-papel { display: none; }
+    /* resultados en papel: solo la tabla, en blanco y negro */
+    @media print {
+      body { background: #fff; color: #000; font-size: 12pt; }
+      main { padding: 0; max-width: none; }
+      main > :not(#marcador), .no-papel, .marca { display: none !important; }
+      .solo-papel { display: block; }
+      section { border: 0; padding: 0; background: #fff; }
+      #marcador table { font-size: 12pt; }
+      th, td { color: #000 !important; border-bottom: 1px solid #999; padding: 6px 8px; }
+      #marcador td.total, #marcador td.cdx { color: #000; }
+      .rondas, .tenue { color: #555 !important; }
+      .firma { margin-top: 18mm; display: flex; gap: 20mm; }
+      .firma div { flex: 1; border-top: 1px solid #000; padding-top: 2mm; font-size: 10pt; }
+    }
   </style>
 </head>
 <body>
@@ -82,18 +99,28 @@
   <p class="sub">Al terminar cada juego, el visor muestra el puntaje, los <b>puntos del equipo</b> y un <b>código</b> de 8 letras. El equipo anota puntaje y código en su Bitácora. Al final (o en cada cambio de juego) peguen aquí los códigos: la tabla suma la <b>mejor ronda de cada juego</b> y ordena a los equipos. El código ya trae el número de equipo, así que nadie puede cambiar su puntaje.</p>
 
   <section id="marcador" aria-labelledby="t-marcador">
+    <div class="solo-papel">
+      <p style="margin:0"><b>CODEXIA · Estación 04 · Redes (Ghost Network) · Resultados del taller</b></p>
+      <p style="margin:0 0 4mm" id="fecha-papel"></p>
+    </div>
     <div class="fila" style="justify-content: space-between; margin-top: 0;">
       <div>
-        <span class="etq">EN VIVO</span>
+        <span class="etq no-papel">EN VIVO</span>
         <h2 id="t-marcador">Puntajes por equipo</h2>
       </div>
-      <div class="fila" style="margin-top: 0;">
+      <div class="fila no-papel" style="margin-top: 0;">
         <span class="estado" id="estado-hoja"><span class="punto"></span><span>Sin hoja de Google</span></span>
         <button type="button" id="pantalla-completa">Proyectar</button>
+        <button type="button" id="imprimir">Imprimir resultados</button>
       </div>
     </div>
-    <p class="ayuda" id="ayuda-marcador">Por juego cuenta la mejor ronda de cada equipo (entre paréntesis, cuántas rondas jugaron). Total = suma de los 4 juegos. Salen de los códigos verificados (de la hoja de Google y de los que pegues abajo).</p>
+    <p class="ayuda" id="ayuda-marcador">Por juego cuenta la mejor ronda de cada equipo (entre paréntesis, cuántas rondas jugaron). <b>CODEXIA /100</b> = 5 puntos por acierto en la mejor ronda de cada juego, máximo 25 por juego. Es lo que va a la columna <b>Taller 4</b> del marcador general. Salen de los códigos verificados (de la hoja de Google y de los que pegues abajo).</p>
     <div class="tabla"><table id="tabla-marcador"></table></div>
+    <div class="fila no-papel">
+      <button type="button" id="mandar-codexia">Mandar a CODEXIA lo que falte</button>
+      <span class="tenue" id="estado-codexia">Los visores mandan sus puntos solos. Usa este botón solo si un visor se quedó sin internet.</span>
+    </div>
+    <div class="solo-papel firma"><div>Facilitador de la estación</div><div>Recibió</div></div>
   </section>
 
   <section aria-labelledby="t-verificar">
@@ -141,6 +168,8 @@
   const NOMBRES = { 1: 'Router humano', 2: 'Arma a Ultrón', 3: 'Carrera de palabras', 4: 'Misión final' };
   const deHoja = new Map(); // código → registro leído de la hoja
   const dePapel = new Map(); // código → registro verificado a mano
+  const enCodexia = new Map(); // equipo → puntos que ya tiene en taller_4 del marcador general
+  let ultimaLista = [];
 
   const urlHoja = () => {
     try { return localStorage.getItem('enlace-url-marcador') || marcador.urlHoja(); } catch (e) { return marcador.urlHoja(); }
@@ -161,17 +190,22 @@
       e.juegos[r.juego] = j;
       equipos.set(r.equipo, e);
     });
-    equipos.forEach((e) => { e.total = Object.values(e.juegos).reduce((a, j) => a + j.mejor, 0); });
+    equipos.forEach((e) => {
+      e.total = Object.values(e.juegos).reduce((a, j) => a + j.mejor, 0);
+      e.codexia = JUEGOS.reduce((a, j) => a + mision.puntosJuego(e.juegos[j] ? e.juegos[j].mejor : 0), 0);
+    });
+    ultimaLista = [...equipos.values()];
     const tabla = document.getElementById('tabla-marcador');
     if (!equipos.size) {
       tabla.innerHTML = '<tr><td class="tenue">Todavía no hay puntajes. Verifica códigos abajo o conecta la hoja de Google.</td></tr>';
       return;
     }
-    const lista = [...equipos.values()].sort((a, b) => b.total - a.total || a.equipo - b.equipo);
+    const lista = [...equipos.values()].sort((a, b) => b.codexia - a.codexia || b.total - a.total || a.equipo - b.equipo);
     const celda = (j) => (j ? `${j.mejor}<span class="rondas">(${j.rondas})</span>` : '<span class="tenue">—</span>');
-    tabla.innerHTML = `<thead><tr><th>#</th><th>Equipo</th>${JUEGOS.map((j) => `<th>${esc(NOMBRES[j])}</th>`).join('')}<th>Total</th></tr></thead><tbody>${
-      lista.map((e, i) => `<tr class="${i === 0 && e.total > 0 ? 'primero' : ''}"><td class="num">${i + 1}</td><td>${e.equipo ? `Equipo ${e.equipo}` : 'Sin equipo'}</td>${
-        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j])}</td>`).join('')}<td class="num total">${e.total}</td></tr>`).join('')}</tbody>`;
+    const enLinea = (e) => (enCodexia.has(e.equipo) ? enCodexia.get(e.equipo) : '<span class="tenue">—</span>');
+    tabla.innerHTML = `<thead><tr><th>#</th><th>Equipo</th>${JUEGOS.map((j) => `<th>${esc(NOMBRES[j])}</th>`).join('')}<th>Aciertos</th><th>CODEXIA /100</th><th class="no-papel">Ya en CODEXIA</th></tr></thead><tbody>${
+      lista.map((e, i) => `<tr class="${i === 0 && e.codexia > 0 ? 'primero' : ''}"><td class="num">${i + 1}</td><td>${e.equipo ? `Equipo ${e.equipo}` : 'Sin equipo'}</td>${
+        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j])}</td>`).join('')}<td class="num">${e.total}</td><td class="num total">${e.codexia}</td><td class="num no-papel">${enLinea(e)}</td></tr>`).join('')}</tbody>`;
   }
 
   // ---------- verificar códigos en papel ----------
@@ -235,7 +269,53 @@
     }
   }
 
+  // ---------- marcador general de CODEXIA (Supabase, taller_4) ----------
+  const CDX = window.CODEXIA_SCORES;
+  const columna = `taller_${CDX.taller}`;
+
+  async function leerCodexia() {
+    try {
+      const r = await fetch(`${CDX.url}/rest/v1/scores?select=equipo,${columna}`, { headers: { apikey: CDX.clave }, cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      enCodexia.clear();
+      (await r.json()).forEach((f) => enCodexia.set(Number(f.equipo), Math.round(Number(f[columna]) || 0)));
+      pintarMarcador();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function mandarCodexia() {
+    const estado = document.getElementById('estado-codexia');
+    await leerCodexia();
+    const faltan = ultimaLista.filter((e) => e.equipo >= 1 && e.equipo <= CDX.equipos && e.codexia > (enCodexia.get(e.equipo) || 0));
+    if (!faltan.length) { estado.textContent = 'Nada que mandar: CODEXIA ya tiene estos puntos (o más).'; return; }
+    if (!confirm(`¿Mandar a CODEXIA (Taller ${CDX.taller})?\n\n${faltan.map((e) => `Equipo ${e.equipo}: ${e.codexia}`).join('\n')}\n\nCODEXIA se queda con el puntaje más alto de cada equipo.`)) return;
+    estado.textContent = 'Mandando…';
+    let bien = 0;
+    for (const e of faltan) {
+      try {
+        const r = await fetch(`${CDX.url}/rest/v1/rpc/registrar_taller`, {
+          method: 'POST',
+          headers: { apikey: CDX.clave, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_equipo: e.equipo, p_taller: CDX.taller, p_puntaje: e.codexia }),
+        });
+        if (r.ok) bien += 1;
+      } catch (x) { /* sin internet */ }
+    }
+    await leerCodexia();
+    estado.textContent = bien === faltan.length ? `Listo: ${bien} equipo(s) actualizados ✓` : `Se mandaron ${bien} de ${faltan.length}. Revisa el internet y vuelve a intentar.`;
+  }
+
   // ---------- eventos ----------
+  document.getElementById('mandar-codexia').addEventListener('click', mandarCodexia);
+  document.getElementById('imprimir').addEventListener('click', () => {
+    document.getElementById('fecha-papel').textContent = new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+    window.print();
+  });
+  leerCodexia();
+  setInterval(leerCodexia, 30000);
   document.getElementById('verificar').addEventListener('click', verificar);
   document.getElementById('limpiar').addEventListener('click', () => { document.getElementById('codigos').value = ''; verificar(); });
   document.getElementById('pantalla-completa').addEventListener('click', () => {

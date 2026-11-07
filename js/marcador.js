@@ -30,18 +30,21 @@ const marcador = {
   clave() { return (window.ENLACE_CONFIG && window.ENLACE_CONFIG.clave) || 'enlace-vr'; },
   urlHoja() { return (window.ENLACE_CONFIG && window.ENLACE_CONFIG.urlHoja) || ''; },
 
-  /** Número de equipo de este visor (1 a 15; 0 = sin elegir). Se elige en el menú. */
+  /** Número de equipo de este visor (1 a 31; 0 = sin elegir). Se elige en el menú. */
   equipo() {
-    try { return Math.max(0, Math.min(15, parseInt(localStorage.getItem('enlace-equipo'), 10) || 0)); } catch (e) { return 0; }
+    try { return Math.max(0, Math.min(31, parseInt(localStorage.getItem('enlace-equipo'), 10) || 0)); } catch (e) { return 0; }
   },
   ponerEquipo(n) {
     try { localStorage.setItem('enlace-equipo', String(n)); } catch (e) { /* sin almacenamiento */ }
   },
 
-  /** 30 bits de datos (juego 3, equipo 4, puntaje 12, minuto del día 11) + 10 bits de comprobación. */
+  /** 30 bits de datos (juego 3, equipo 4, puntaje 12, minuto del día 11) + 10 bits de comprobación.
+   *  Equipos 16 a 31: el bit alto del puntaje (2048) guarda el 16 del equipo; los puntajes reales
+   *  nunca llegan a 2048, así que los códigos de los equipos 1 a 15 no cambian. */
   crearCodigo(juego, equipo, puntaje, fecha = new Date()) {
     const minuto = fecha.getHours() * 60 + fecha.getMinutes();
-    const datos = ((juego * 16 + equipo) * 4096 + Math.max(0, Math.min(4095, Math.round(puntaje)))) * 2048 + minuto;
+    const alto = equipo >= 16 ? 2048 : 0;
+    const datos = ((juego * 16 + (equipo % 16)) * 4096 + alto + Math.max(0, Math.min(2047, Math.round(puntaje)))) * 2048 + minuto;
     const comprobacion = huella(`${this.clave()}|${datos}`) % 1024;
     const revuelto = (datos ^ (huella(`${this.clave()}#${comprobacion}`) >>> 2)) >>> 0;
     let valor = comprobacion * 1073741824 + revuelto;
@@ -67,8 +70,9 @@ const marcador = {
     const datos = ((valor % 1073741824) ^ (huella(`${this.clave()}#${comprobacion}`) >>> 2)) >>> 0;
     const valido = huella(`${this.clave()}|${datos}`) % 1024 === comprobacion;
     const minuto = datos % 2048;
-    const puntaje = Math.floor(datos / 2048) % 4096;
-    const equipo = Math.floor(datos / 2048 / 4096) % 16;
+    const puntajeCrudo = Math.floor(datos / 2048) % 4096;
+    const puntaje = puntajeCrudo % 2048;
+    const equipo = Math.floor(datos / 2048 / 4096) % 16 + (puntajeCrudo >= 2048 ? 16 : 0);
     const juego = Math.floor(datos / 2048 / 4096 / 16);
     const ok = valido && Boolean(JUEGOS_MARCADOR[juego]) && minuto < 1440;
     return {

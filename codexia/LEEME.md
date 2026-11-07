@@ -33,3 +33,13 @@ La misión final tiene sus propios 12 sectores, de fácil a difícil (`js/robot_
 1. Edita `js/mision.js` (`ip` y `gps`).
 2. Corre `python ../../prototipo_papel/generar_codexia.py` para que la Guía del taller tenga la clave nueva.
 3. Sube los cambios. Los visores que ya tengan pistas guardadas muestran los valores nuevos (se guardan las piezas, no los números).
+
+## Marcador general de CODEXIA (Supabase)
+
+Al terminar cada **ronda**, el visor manda los puntos de su equipo **sobre 100** a la columna `taller_4` (Redes) de la tabla `scores` de Supabase, con la función `registrar_taller` (la misma que usan los otros talleres). Base 100 = **5 puntos por acierto** en la mejor ronda de cada juego, **máximo 25 por juego**. Supabase se queda con el puntaje más alto, así que mandar de nuevo no hace daño.
+
+- La configuración (URL, clave pública, número de taller y la regla de puntos) está en `CODEXIA_SCORES`, al principio de `js/mision.js`.
+- El número de equipo del visor es el del evento (**1 a 20**). **Nuevo equipo** también lo borra, para que cada grupo elija el suyo y nadie mande puntos al equipo anterior. Si eligen el número después de jugar, se mandan en ese momento.
+- Sin internet, el visor guarda los puntos y reintenta solo (al abrir otra página, al volver la conexión y cada 30 s).
+- Respaldo en `marcador.html`: columna **CODEXIA /100**, columna **Ya en CODEXIA** (lo que tiene Supabase), **Mandar a CODEXIA lo que falte** e **Imprimir resultados** (hoja en blanco y negro con firmas).
+- Los códigos de 8 letras ahora aceptan equipos del 16 al 20 (`../js/marcador.js`); los de los equipos 1 a 15 no cambian.

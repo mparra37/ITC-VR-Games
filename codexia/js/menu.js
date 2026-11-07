@@ -98,14 +98,24 @@ AFRAME.registerComponent('menu-juegos', {
     });
     // debajo del panel: de qué equipo es este visor y la música
     this.botonesEquipo = [];
-    const tira = crearEntidad(this.el, { position: '0 0.36 -1.62', rotation: '-14 0 0' });
-    crearEntidad(tira, { geometry: 'primitive: plane; width: 2.1; height: 0.2', material: 'shader: flat; color: #050405; opacity: 0.94; transparent: true', position: '0 0 -0.01' });
-    const etiqueta = crearEntidad(tira, { lienzo: 'ancho: 0.5; alto: 0.12', position: '-0.78 0 0' });
-    pintar(etiqueta, (ctx, w, h) => texto(ctx, 'Este visor es del', 20, h / 2, { tam: 42, peso: 600, color: COLOR.tenue }));
-    for (let n = 1; n <= 8; n++) {
-      const b = crearEntidad(tira, { position: `${-0.44 + (n - 1) * 0.135} 0 0`, class: 'clickable', boton: { texto: `Eq. ${n}`, ancho: 0.125, alto: 0.12, accion: 'equipo', valor: String(n), elegido: marcador.equipo() === n } });
+    // equipos del evento (1 a 20) en dos filas de 10
+    const tira = crearEntidad(this.el, { position: '0 0.31 -1.62', rotation: '-14 0 0' });
+    crearEntidad(tira, { geometry: 'primitive: plane; width: 2.1; height: 0.3', material: 'shader: flat; color: #050405; opacity: 0.94; transparent: true', position: '0 0 -0.01' });
+    const etiqueta = crearEntidad(tira, { lienzo: 'ancho: 0.5; alto: 0.24', position: '-0.78 0 0' });
+    pintar(etiqueta, (ctx, w, h) => {
+      texto(ctx, 'Este visor es', 20, h * 0.3, { tam: 42, peso: 600, color: COLOR.tenue });
+      texto(ctx, 'del equipo:', 20, h * 0.7, { tam: 42, peso: 600, color: COLOR.tenue });
+    });
+    const totalEquipos = (window.CODEXIA_SCORES && window.CODEXIA_SCORES.equipos) || 20;
+    for (let n = 1; n <= totalEquipos; n++) {
+      const col = (n - 1) % 10;
+      const fila = Math.floor((n - 1) / 10);
+      const b = crearEntidad(tira, { position: `${(-0.47 + col * 0.11).toFixed(3)} ${fila ? -0.065 : 0.065} 0`, class: 'clickable', boton: { texto: String(n), ancho: 0.1, alto: 0.11, accion: 'equipo', valor: String(n), elegido: marcador.equipo() === n } });
       this.botonesEquipo.push(b);
     }
+    document.addEventListener('enlace-equipo', () => {
+      this.botonesEquipo.forEach((b, i) => b.setAttribute('boton', 'elegido', i + 1 === marcador.equipo()));
+    });
     this.botonMusica = crearEntidad(tira, { position: '0.83 0 0', class: 'clickable', boton: { texto: musica.encendida() ? 'Música: sí' : 'Música: no', ancho: 0.3, alto: 0.12, accion: 'musica' } });
     this.el.sceneEl.addEventListener('boton-presionado', (e) => {
       const { accion, valor } = e.detail;
@@ -121,6 +131,7 @@ AFRAME.registerComponent('menu-juegos', {
           return;
         }
         mision.reiniciar();
+        this.botonesEquipo.forEach((b) => b.setAttribute('boton', 'elegido', false));
         sonido.nivel();
         this.dibujarPie('Visor listo para un equipo nuevo: elijan su número de equipo abajo');
       } else if (accion === 'musica') {
@@ -151,9 +162,11 @@ AFRAME.registerComponent('menu-juegos', {
       // puntos del equipo: mejor ronda de cada juego y el total
       ctx.fillStyle = 'rgba(242,244,248,.12)';
       ctx.fillRect(40, h * 0.63, w - 80, 3);
-      texto(ctx, 'PUNTOS DEL EQUIPO', 50, h * 0.68, { tam: 36, peso: 600, color: COLOR.tenue, fuente: MONO });
-      texto(ctx, String(mision.totalPuntos()), w - 50, h * 0.69, { tam: 70, peso: 800, color: COLOR.texto, alinear: 'right' });
-      texto(ctx, mision.resumenPuntos(), w / 2, h * 0.77, { tam: 34, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
+      texto(ctx, 'PUNTOS CODEXIA', 50, h * 0.68, { tam: 36, peso: 600, color: COLOR.tenue, fuente: MONO });
+      texto(ctx, `${mision.puntosCodexia()}/100`, w - 50, h * 0.69, { tam: 66, peso: 800, color: COLOR.texto, alinear: 'right' });
+      texto(ctx, mision.resumenPuntos(), w / 2, h * 0.755, { tam: 32, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
+      const envio = mision.envio();
+      texto(ctx, mision.textoEnvio(), w / 2, h * 0.81, { tam: 28, peso: 600, color: envio && envio.estado === 'enviado' ? COLOR.bien : COLOR.acento, alinear: 'center', fuente: MONO });
       if (mision.completa()) {
         texto(ctx, '¡NÚCLEO LOCALIZADO!', w / 2, h * 0.9, { tam: 52, peso: 800, color: COLOR.bien, alinear: 'center' });
       } else {
