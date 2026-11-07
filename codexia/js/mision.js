@@ -40,9 +40,11 @@ window.CODEXIA_SCORES = {
   // peso = puntos máximos del juego (suman 100); meta = aciertos en una ronda para llevarse el peso
   juegos: {
     router: { corto: 'Router', peso: 20, meta: 18 }, // 3 min, 3 niveles de 5 paquetes
-    arma: { corto: 'Arma', peso: 25, meta: 17 }, // 5 min, 3 robots completos = 4 + 6 + 7 piezas
+    arma: { corto: 'Arma', peso: 25, meta: 31 }, // 5 min, 5 robots completos = 4 + 6 + 7 + 7 + 7 piezas
     carrera: { corto: 'Carrera', peso: 25, meta: 12 }, // 5 min, palabras de 3, 4 y 5 letras
-    robot: { corto: 'Misión', peso: 30, meta: 5 }, // 5 min, 6 niveles cada vez más difíciles
+    // 5 min, 6 niveles: el nivel 1 se resuelve con 1 instrucción y el 6 con 4 o 5. Cada caída al agua
+    // vale su nivel (1, 2, 3… y 6 después del 6.º); meta 27 = 7 caídas (1+2+3+4+5+6+6)
+    robot: { corto: 'Misión', peso: 30, meta: 27, porNivel: 6 },
   },
   equipos: 20, // equipos del evento: 1 a 20
 };
@@ -111,11 +113,15 @@ const mision = {
 
   // ---------- marcador general de CODEXIA (sobre 100) ----------
 
-  /** Puntos CODEXIA de un juego: peso × aciertos ÷ meta, redondeado, sin pasar del peso. */
+  /** Puntos CODEXIA de un juego: peso × aciertos ÷ meta, redondeado, sin pasar del peso.
+   *  Tabla: Router 18 = 20 · Arma 31 = 25 · Carrera 12 = 25 · Misión 1→1, 2→3, 3→7, 4→11, 5→17, 6→23, 7→30. */
   puntosJuego(juego, aciertos) {
     const j = window.CODEXIA_SCORES.juegos[juego];
     if (!j) return 0;
-    return Math.min(j.peso, Math.round((j.peso * (Number(aciertos) || 0)) / j.meta));
+    const n = Math.max(0, Number(aciertos) || 0);
+    // en la misión final, la caída k vale k (hasta el último nivel): 1, 2, 3, 4, 5, 6, 6…
+    const valor = j.porNivel ? Array.from({ length: n }, (_, k) => Math.min(k + 1, j.porNivel)).reduce((a, b) => a + b, 0) : n;
+    return Math.min(j.peso, Math.round((j.peso * valor) / j.meta));
   },
 
   /** Puntos del equipo sobre 100 (lo que se manda a CODEXIA). */
