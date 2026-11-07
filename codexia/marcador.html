@@ -114,7 +114,7 @@
         <button type="button" id="imprimir">Imprimir resultados</button>
       </div>
     </div>
-    <p class="ayuda" id="ayuda-marcador">Por juego cuenta la mejor ronda de cada equipo (entre paréntesis, cuántas rondas jugaron). <b>CODEXIA /100</b> = 5 puntos por acierto en la mejor ronda de cada juego, máximo 25 por juego. Es lo que va a la columna <b>Taller 4</b> del marcador general. Salen de los códigos verificados (de la hoja de Google y de los que pegues abajo).</p>
+    <p class="ayuda" id="ayuda-marcador">Por juego cuenta la mejor ronda de cada equipo: puntos CODEXIA y, en gris, aciertos y cuántas rondas jugaron. Cada juego se llena al llegar a su meta en una ronda: <b>Router 20 pts = 18 paquetes</b> · <b>Arma 25 pts = 17 piezas</b> · <b>Carrera 25 pts = 12 palabras</b> · <b>Misión final 30 pts = 5 veces al agua</b> (proporcional, redondeado). <b>CODEXIA /100</b> es la suma y es lo que va a la columna <b>Taller 4</b> del marcador general. Salen de los códigos verificados (de la hoja de Google y de los que pegues abajo).</p>
     <div class="tabla"><table id="tabla-marcador"></table></div>
     <div class="fila no-papel">
       <button type="button" id="mandar-codexia">Mandar a CODEXIA lo que falte</button>
@@ -165,6 +165,7 @@
 <script>
   // los 4 juegos del taller Ghost Network (mismos números de juego que en los códigos)
   const JUEGOS = [1, 2, 3, 4];
+  const CLAVE_JUEGO = { 1: 'router', 2: 'arma', 3: 'carrera', 4: 'robot' };
   const NOMBRES = { 1: 'Router humano', 2: 'Arma a Ultrón', 3: 'Carrera de palabras', 4: 'Misión final' };
   const deHoja = new Map(); // código → registro leído de la hoja
   const dePapel = new Map(); // código → registro verificado a mano
@@ -192,7 +193,7 @@
     });
     equipos.forEach((e) => {
       e.total = Object.values(e.juegos).reduce((a, j) => a + j.mejor, 0);
-      e.codexia = JUEGOS.reduce((a, j) => a + mision.puntosJuego(e.juegos[j] ? e.juegos[j].mejor : 0), 0);
+      e.codexia = JUEGOS.reduce((a, j) => a + mision.puntosJuego(CLAVE_JUEGO[j], e.juegos[j] ? e.juegos[j].mejor : 0), 0);
     });
     ultimaLista = [...equipos.values()];
     const tabla = document.getElementById('tabla-marcador');
@@ -201,11 +202,13 @@
       return;
     }
     const lista = [...equipos.values()].sort((a, b) => b.codexia - a.codexia || b.total - a.total || a.equipo - b.equipo);
-    const celda = (j) => (j ? `${j.mejor}<span class="rondas">(${j.rondas})</span>` : '<span class="tenue">—</span>');
+    // cada juego: puntos CODEXIA y, en gris, aciertos de la mejor ronda y cuántas rondas jugaron
+    const celda = (j, id) => (j ? `${mision.puntosJuego(CLAVE_JUEGO[id], j.mejor)}<span class="rondas">${j.mejor} ac. (${j.rondas})</span>` : '<span class="tenue">—</span>');
+    const cabeza = (j) => `${esc(NOMBRES[j])} /${window.CODEXIA_SCORES.juegos[CLAVE_JUEGO[j]].peso}`;
     const enLinea = (e) => (enCodexia.has(e.equipo) ? enCodexia.get(e.equipo) : '<span class="tenue">—</span>');
-    tabla.innerHTML = `<thead><tr><th>#</th><th>Equipo</th>${JUEGOS.map((j) => `<th>${esc(NOMBRES[j])}</th>`).join('')}<th>Aciertos</th><th>CODEXIA /100</th><th class="no-papel">Ya en CODEXIA</th></tr></thead><tbody>${
+    tabla.innerHTML = `<thead><tr><th>#</th><th>Equipo</th>${JUEGOS.map((j) => `<th>${cabeza(j)}</th>`).join('')}<th>Aciertos</th><th>CODEXIA /100</th><th class="no-papel">Ya en CODEXIA</th></tr></thead><tbody>${
       lista.map((e, i) => `<tr class="${i === 0 && e.codexia > 0 ? 'primero' : ''}"><td class="num">${i + 1}</td><td>${e.equipo ? `Equipo ${e.equipo}` : 'Sin equipo'}</td>${
-        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j])}</td>`).join('')}<td class="num">${e.total}</td><td class="num total">${e.codexia}</td><td class="num no-papel">${enLinea(e)}</td></tr>`).join('')}</tbody>`;
+        JUEGOS.map((j) => `<td class="num">${celda(e.juegos[j], j)}</td>`).join('')}<td class="num">${e.total}</td><td class="num total">${e.codexia}</td><td class="num no-papel">${enLinea(e)}</td></tr>`).join('')}</tbody>`;
   }
 
   // ---------- verificar códigos en papel ----------

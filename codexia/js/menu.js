@@ -164,7 +164,7 @@ AFRAME.registerComponent('menu-juegos', {
       ctx.fillRect(40, h * 0.63, w - 80, 3);
       texto(ctx, 'PUNTOS CODEXIA', 50, h * 0.68, { tam: 36, peso: 600, color: COLOR.tenue, fuente: MONO });
       texto(ctx, `${mision.puntosCodexia()}/100`, w - 50, h * 0.69, { tam: 66, peso: 800, color: COLOR.texto, alinear: 'right' });
-      texto(ctx, mision.resumenPuntos(), w / 2, h * 0.755, { tam: 32, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
+      texto(ctx, mision.resumenCodexia(), w / 2, h * 0.755, { tam: 25, peso: 600, color: COLOR.tenue, alinear: 'center', fuente: MONO });
       const envio = mision.envio();
       texto(ctx, mision.textoEnvio(), w / 2, h * 0.81, { tam: 28, peso: 600, color: envio && envio.estado === 'enviado' ? COLOR.bien : COLOR.acento, alinear: 'center', fuente: MONO });
       if (mision.completa()) {

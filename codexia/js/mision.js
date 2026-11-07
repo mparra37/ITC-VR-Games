@@ -14,9 +14,11 @@
  * ▶ IP y GPS DE EJEMPLO: cámbienlos aquí por los que definan los organizadores del reto final.
  *
  * MARCADOR GENERAL DE CODEXIA (Supabase): al terminar cada ronda, el visor manda los puntos del
- * equipo sobre 100 a la columna taller_4 (Redes). Base 100 = 5 puntos por acierto en la mejor ronda
- * de cada juego, máximo 25 por juego (4 juegos × 25). Supabase se queda con el más alto, así que
- * mandar varias veces no hace daño. Sin internet se guarda en el visor y se reintenta solo.
+ * equipo sobre 100 a la columna taller_4 (Redes). Cada juego vale un máximo (peso) y se llena al
+ * llegar a su META de aciertos en la mejor ronda: puntos = peso × aciertos ÷ meta, redondeado, con tope
+ * en el peso. Los errores no restan directo, pero cada uno bloquea 5 s, así que equivocarse cuesta
+ * aciertos. Supabase se queda con el más alto, así que mandar varias veces no hace daño. Sin internet
+ * se guarda en el visor y se reintenta solo.
  */
 /* global marcador */
 
@@ -35,8 +37,13 @@ window.CODEXIA_SCORES = {
   url: 'https://zgpfcmvjmjfaphtudmis.supabase.co',
   clave: 'sb_publishable_0uQxgvjB7S7eCSqssUlPnA_Brhj-zx7', // clave pública (no es secreta)
   taller: 4, // columna taller_4 = estación 04 · Redes
-  porAcierto: 5,
-  topePorJuego: 25,
+  // peso = puntos máximos del juego (suman 100); meta = aciertos en una ronda para llevarse el peso
+  juegos: {
+    router: { corto: 'Router', peso: 20, meta: 18 }, // 3 min, 3 niveles de 5 paquetes
+    arma: { corto: 'Arma', peso: 25, meta: 17 }, // 5 min, 3 robots completos = 4 + 6 + 7 piezas
+    carrera: { corto: 'Carrera', peso: 25, meta: 12 }, // 5 min, palabras de 3, 4 y 5 letras
+    robot: { corto: 'Misión', peso: 30, meta: 5 }, // 5 min, 6 niveles cada vez más difíciles
+  },
   equipos: 20, // equipos del evento: 1 a 20
 };
 
@@ -104,15 +111,22 @@ const mision = {
 
   // ---------- marcador general de CODEXIA (sobre 100) ----------
 
-  /** Puntos sobre 100 de un juego: 5 por acierto de la mejor ronda, máximo 25. */
-  puntosJuego(mejor) {
-    const c = window.CODEXIA_SCORES;
-    return Math.min(c.topePorJuego, c.porAcierto * (Number(mejor) || 0));
+  /** Puntos CODEXIA de un juego: peso × aciertos ÷ meta, redondeado, sin pasar del peso. */
+  puntosJuego(juego, aciertos) {
+    const j = window.CODEXIA_SCORES.juegos[juego];
+    if (!j) return 0;
+    return Math.min(j.peso, Math.round((j.peso * (Number(aciertos) || 0)) / j.meta));
   },
 
   /** Puntos del equipo sobre 100 (lo que se manda a CODEXIA). */
   puntosCodexia(p = this.puntos()) {
-    return Object.keys(window.MISION.juegos).reduce((a, k) => a + this.puntosJuego(p[k] ? p[k].mejor : 0), 0);
+    return Object.keys(window.CODEXIA_SCORES.juegos).reduce((a, k) => a + this.puntosJuego(k, p[k] ? p[k].mejor : 0), 0);
+  },
+
+  /** "Router 6/20 · Arma 25/25 · Carrera —/25 · Misión —/30" */
+  resumenCodexia(p = this.puntos()) {
+    return Object.entries(window.CODEXIA_SCORES.juegos)
+      .map(([k, j]) => `${j.corto} ${p[k] ? this.puntosJuego(k, p[k].mejor) : '—'}/${j.peso}`).join(' · ');
   },
 
   /** Último envío: { equipo, puntos, estado: 'enviando' | 'enviado' | 'sin-internet' | 'sin-equipo' }. */
@@ -233,6 +247,9 @@ if (typeof marcador !== 'undefined') {
     registro.total = mision.totalPuntos();
     registro.resumen = mision.resumenPuntos();
     registro.codexia = mision.puntosCodexia();
+    registro.puntosRonda = mision.puntosJuego(juego, puntaje);
+    registro.pesoJuego = (window.CODEXIA_SCORES.juegos[juego] || {}).peso;
+    registro.resumen = mision.resumenCodexia();
     mision.enviarCodexia().then(() => { if (alCambiar) alCambiar(registro); });
     return registro;
   };

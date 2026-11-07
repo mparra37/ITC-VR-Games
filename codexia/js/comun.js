@@ -652,9 +652,11 @@ function dibujarFinalRonda(ctx, w, h, { practica, puntaje, unidad, detalle, regi
     if (registro.codexia !== undefined && typeof mision !== 'undefined') {
       // puntos sobre 100 que van al marcador general de CODEXIA, y si ya se mandaron
       const envio = mision.envio();
+      // renglón 1: total y lo que dio esta ronda · renglón 2: envío y puntos por juego
       texto(ctx, `PUNTOS CODEXIA: ${mision.puntosCodexia()} / 100`, 70, h * 0.583, { tam: 40, peso: 700, color: COLOR.texto });
-      texto(ctx, registro.resumen, w - 70, h * 0.583, { tam: 27, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
-      texto(ctx, mision.textoEnvio(), 70, h * 0.64, { tam: 27, peso: 600, color: envio && envio.estado === 'enviado' ? COLOR.bien : COLOR.acento, fuente: MONO });
+      if (registro.pesoJuego) texto(ctx, `Esta ronda: ${registro.puntosRonda} de ${registro.pesoJuego} pts`, w - 70, h * 0.583, { tam: 32, peso: 700, color: COLOR.acento, alinear: 'right', fuente: MONO });
+      texto(ctx, mision.textoEnvio(), 70, h * 0.64, { tam: 24, peso: 600, color: envio && envio.estado === 'enviado' ? COLOR.bien : COLOR.acento, fuente: MONO });
+      texto(ctx, registro.resumen, w - 70, h * 0.64, { tam: 22, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
     } else {
       texto(ctx, `TOTAL DEL EQUIPO: ${registro.total}`, 70, h * 0.605, { tam: 42, peso: 600, color: COLOR.texto });
       texto(ctx, registro.resumen, w - 70, h * 0.605, { tam: 27, peso: 600, color: COLOR.tenue, alinear: 'right', fuente: MONO });
